@@ -14,8 +14,8 @@ import { UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const registerSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  username: z.string().min(3, "ユーザー名は3文字以上で入力してください"),
+  password: z.string().min(6, "パスワードは6文字以上で入力してください"),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -37,10 +37,10 @@ export default function RegisterPage() {
         method: "POST",
         body: JSON.stringify(data),
       });
-      toast.success("Account created! Please login.");
+      toast.success("アカウントを作成しました！ログインしてください。");
       router.push("/login");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Registration failed";
+      const message = err instanceof Error ? err.message : "登録に失敗しました";
       setError("root", { message });
       toast.error(message);
     }
@@ -53,16 +53,16 @@ export default function RegisterPage() {
           <div className="mx-auto w-12 h-12 bg-zinc-900 dark:bg-zinc-100 rounded-xl flex items-center justify-center">
             <UserPlus className="w-6 h-6 text-white dark:text-zinc-900" />
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Create account</CardTitle>
-          <CardDescription>Start managing your tasks today.</CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight">アカウント作成</CardTitle>
+          <CardDescription>タスク管理をスタート</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">ユーザー名</Label>
               <Input
                 id="username"
-                placeholder="Choose a username"
+                placeholder="ユーザー名を決めてください"
                 {...register("username")}
                 className={errors.username ? "border-red-500" : ""}
               />
@@ -71,7 +71,7 @@ export default function RegisterPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">パスワード</Label>
               <Input
                 id="password"
                 type="password"
@@ -90,17 +90,17 @@ export default function RegisterPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Creating account...
+                  アカウント作成中...
                 </>
               ) : (
-                "Register"
+                "登録"
               )}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-            Already have an account?{" "}
+            すでにアカウントをお持ちですか？{" "}
             <Link href="/login" className="font-bold text-zinc-900 dark:text-zinc-100 hover:underline">
-              Login
+              ログイン
             </Link>
           </p>
         </CardContent>

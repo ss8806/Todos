@@ -14,8 +14,8 @@ import { LogIn, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const loginSchema = z.object({
-  username: z.string().min(3, "Username must be at least 3 characters"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  username: z.string().min(3, "ユーザー名は3文字以上で入力してください"),
+  password: z.string().min(6, "パスワードは6文字以上で入力してください"),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -34,10 +34,10 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.username, data.password);
-      toast.success("Welcome back!");
+      toast.success("Welcome！");
       router.push("/");
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Login failed";
+      const message = err instanceof Error ? err.message : "ログインに失敗しました";
       setError("root", { message });
       toast.error(message);
     }
@@ -50,16 +50,16 @@ export default function LoginPage() {
           <div className="mx-auto w-12 h-12 bg-zinc-900 dark:bg-zinc-100 rounded-xl flex items-center justify-center">
             <LogIn className="w-6 h-6 text-white dark:text-zinc-900" />
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight">Welcome back</CardTitle>
-          <CardDescription>Login to manage your tasks.</CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight">Welcome</CardTitle>
+          <CardDescription>ログインしてタスクを管理しましょう。</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="username">ユーザー名</Label>
               <Input
                 id="username"
-                placeholder="Enter your username"
+                placeholder="ユーザー名を入力"
                 {...register("username")}
                 className={errors.username ? "border-red-500" : ""}
               />
@@ -68,7 +68,7 @@ export default function LoginPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">パスワード</Label>
               <Input
                 id="password"
                 type="password"
@@ -87,17 +87,17 @@ export default function LoginPage() {
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Logging in...
+                  ログイン中...
                 </>
               ) : (
-                "Login"
+                "ログイン"
               )}
             </Button>
           </form>
           <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-            Don&apos;t have an account?{" "}
+            アカウントをお持ちでないですか？{" "}
             <Link href="/register" className="font-bold text-zinc-900 dark:text-zinc-100 hover:underline">
-              Create an account
+              アカウントを作成
             </Link>
           </p>
         </CardContent>

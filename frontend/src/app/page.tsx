@@ -25,10 +25,10 @@ export default function Home() {
     addTodoMutation.mutate(newTodo, {
       onSuccess: () => {
         setNewTodo("");
-        toast.success("Task added!");
+        toast.success("タスクを追加しました");
       },
       onError: () => {
-        toast.error("Failed to add task");
+        toast.error("タスクの追加に失敗しました");
       },
     });
   };
@@ -51,12 +51,12 @@ export default function Home() {
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight">Tasks</h1>
-            <p className="text-zinc-500 dark:text-zinc-400 mt-1">Manage your tasks with ease.</p>
+            <h1 className="text-4xl font-extrabold tracking-tight">タスク</h1>
+            <p className="text-zinc-500 dark:text-zinc-400 mt-1">タスクを管理しましょう。</p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="w-4 h-4 mr-2" />
-            Logout
+            ログアウト
           </Button>
         </div>
 
@@ -66,7 +66,7 @@ export default function Home() {
               <Input
                 value={newTodo}
                 onChange={(e) => setNewTodo(e.target.value)}
-                placeholder="What needs to be done?"
+                placeholder="やることを入力..."
                 className="flex-1"
               />
               <Button type="submit" disabled={addTodoMutation.isPending}>
@@ -75,7 +75,7 @@ export default function Home() {
                 ) : (
                   <>
                     <Plus className="w-4 h-4 mr-2" />
-                    Add
+                    追加
                   </>
                 )}
               </Button>
@@ -91,7 +91,7 @@ export default function Home() {
           <Card className="py-20">
             <CardContent className="flex flex-col items-center justify-center text-center">
               <FileText className="w-12 h-12 text-zinc-300 mb-4" />
-              <p className="text-zinc-500 dark:text-zinc-400">No tasks yet. Add one above!</p>
+              <p className="text-zinc-500 dark:text-zinc-400">タスクがまだありません。上から追加しましょう！</p>
             </CardContent>
           </Card>
         ) : (
@@ -99,11 +99,11 @@ export default function Home() {
             <div className="flex gap-4 mb-4">
               <Badge variant="secondary">
                 <Circle className="w-3 h-3 mr-1" />
-                {pendingCount} pending
+                {pendingCount} 未完了
               </Badge>
               <Badge variant="default">
                 <CheckCircle className="w-3 h-3 mr-1" />
-                {completedCount} completed
+                {completedCount} 完了
               </Badge>
             </div>
 
@@ -121,7 +121,7 @@ export default function Home() {
                           toggleTodoMutation.mutate(
                             { id: todo.id, is_completed: todo.is_completed },
                             {
-                              onError: () => toast.error("Failed to update task"),
+                              onError: () => toast.error("タスクの更新に失敗しました"),
                             }
                           )
                         }
@@ -140,8 +140,8 @@ export default function Home() {
                         size="icon"
                         onClick={() =>
                           deleteTodoMutation.mutate(todo.id, {
-                            onSuccess: () => toast.success("Task deleted"),
-                            onError: () => toast.error("Failed to delete task"),
+                            onSuccess: () => toast.success("タスクを削除しました"),
+                            onError: () => toast.error("タスクの削除に失敗しました"),
                           })
                         }
                         className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
