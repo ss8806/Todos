@@ -1,5 +1,8 @@
 # Todo Application
 
+![CI](https://github.com/ss8806/Todos/workflows/CI/badge.svg)
+[![codecov](https://codecov.io/gh/ss8806/Todos/branch/main/graph/badge.svg)](https://codecov.io/gh/ss8806/Todos)
+
 A modern Todo application built with FastAPI, Next.js, and PostgreSQL.
 
 ## Overview
