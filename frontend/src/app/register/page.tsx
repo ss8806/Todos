@@ -18,7 +18,7 @@ const registerSchema = z.object({
   password: z.string().min(6, "パスワードは6文字以上で入力してください"),
 });
 
-type RegisterForm = z.infer<typeof registerSchema>;
+type RegisterForm = z.output<typeof registerSchema>;
 
 export default function RegisterPage() {
   const router = useRouter();

@@ -5,7 +5,7 @@ import { login } from "@/lib/api";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +18,7 @@ const loginSchema = z.object({
   password: z.string().min(6, "パスワードは6文字以上で入力してください"),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = z.output<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
