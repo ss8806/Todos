@@ -14,12 +14,12 @@ export function useTodos() {
 
   const todosQuery = useQuery<Todo[]>({
     queryKey: ["todos"],
-    queryFn: () => apiFetch("/todos"),
+    queryFn: () => apiFetch("/todos/"),
   });
 
   const addTodoMutation = useMutation({
     mutationFn: (title: string) =>
-      apiFetch("/todos", {
+      apiFetch("/todos/", {
         method: "POST",
         body: JSON.stringify({ title }),
       }),

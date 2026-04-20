@@ -20,8 +20,8 @@ async def read_todos(
     is_completed: Optional[bool] = Query(default=None, description="完了状態でのフィルタ"),
     priority: Optional[PriorityEnum] = Query(default=None, description="優先度でのフィルタ"),
     tags: Optional[str] = Query(default=None, description="タグでのフィルタ（カンマ区切り）"),
-    sort_by: str = Query(default="created_at", regex="^(created_at|priority|due_date)$", description="ソート対象のフィールド"),
-    sort_order: str = Query(default="desc", regex="^(asc|desc)$", description="ソートオーダー"),
+    sort_by: str = Query(default="created_at", pattern="^(created_at|priority|due_date)$", description="ソート対象のフィールド"),
+    sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="ソートオーダー"),
 ) -> Any:
     todos = await crud_todo.get_todos(
         db, 
