@@ -1,6 +1,6 @@
 import uuid
 from typing import List, TYPE_CHECKING
-from sqlmodel import Field, Relationship
+from sqlmodel import Field, Relationship, Index
 from app.schemas.user import UserBase
 
 if TYPE_CHECKING:
@@ -8,6 +8,10 @@ if TYPE_CHECKING:
 
 class User(UserBase, table=True):
     __tablename__ = "users"
+    __table_args__ = (
+        Index('ix_users_username', 'username'),
+    )
+    
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str = Field(nullable=False)
     
