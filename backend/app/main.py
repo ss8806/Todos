@@ -13,6 +13,14 @@ from app.core.config import settings
 from app.core.db import engine, get_db
 from app.core.logging import setup_logging
 from app.middleware.logging import LoggingMiddleware
+from app.middleware.error_handler import (
+    validation_exception_handler,
+    http_exception_handler,
+    general_exception_handler
+)
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi import HTTPException
 
 # ロギングの初期化
 setup_logging()
@@ -51,6 +59,12 @@ app = FastAPI(
         {"name": "health", "description": "ヘルスチェックAPI"},
     ],
 )
+
+# エラーハンドラーの登録
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, general_exception_handler)
 
 # JWT Bearer認証スキーマを追加
 app.openapi_schema = None

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { toast } from "sonner";
 
 export interface Todo {
   id: string;
@@ -24,6 +25,10 @@ export function useTodos() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      toast.success("TODO追加", { description: "TODOを追加しました" });
+    },
+    onError: (error: Error) => {
+      toast.error("TODO追加失敗", { description: error.message });
     },
   });
 
@@ -36,6 +41,9 @@ export function useTodos() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
     },
+    onError: (error: Error) => {
+      toast.error("TODO更新失敗", { description: error.message });
+    },
   });
 
   const deleteTodoMutation = useMutation({
@@ -45,6 +53,10 @@ export function useTodos() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      toast.success("TODO削除", { description: "TODOを削除しました" });
+    },
+    onError: (error: Error) => {
+      toast.error("TODO削除失敗", { description: error.message });
     },
   });
 
