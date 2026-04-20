@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
 from sqlmodel import Field, Relationship
-from app.schemas.todo import TodoBase
+from app.schemas.todo import TodoBase, PriorityEnum
 
 if TYPE_CHECKING:
     from app.models.user import User

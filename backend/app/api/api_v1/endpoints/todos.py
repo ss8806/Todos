@@ -1,12 +1,12 @@
-from typing import Any, List
+from typing import Any, List, Optional
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.crud import crud_todo
 from app.models.user import User
-from app.schemas.todo import TodoCreate, TodoRead, TodoUpdate
+from app.schemas.todo import TodoCreate, TodoRead, TodoUpdate, PriorityEnum
 
 router = APIRouter(tags=["todos"])
 
@@ -14,8 +14,27 @@ router = APIRouter(tags=["todos"])
 async def read_todos(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
+    skip: int = Query(default=0, ge=0, description="スキップする件数"),
+    limit: int = Query(default=100, ge=1, le=100, description="取得件数"),
+    search: Optional[str] = Query(default=None, description="検索キーワード"),
+    is_completed: Optional[bool] = Query(default=None, description="完了状態でのフィルタ"),
+    priority: Optional[PriorityEnum] = Query(default=None, description="優先度でのフィルタ"),
+    tags: Optional[str] = Query(default=None, description="タグでのフィルタ（カンマ区切り）"),
+    sort_by: str = Query(default="created_at", regex="^(created_at|priority|due_date)$", description="ソート対象のフィールド"),
+    sort_order: str = Query(default="desc", regex="^(asc|desc)$", description="ソートオーダー"),
 ) -> Any:
-    todos = await crud_todo.get_todos(db, user_id=current_user.id)
+    todos = await crud_todo.get_todos(
+        db, 
+        user_id=current_user.id,
+        skip=skip,
+        limit=limit,
+        search=search,
+        is_completed=is_completed,
+        priority=priority,
+        tags=tags,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
     return todos
 
 @router.post("/", response_model=TodoRead, summary="TODO作成", response_description="作成されたTODO")
@@ -37,7 +56,13 @@ async def update_todo(
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     todo = await crud_todo.update_todo(
-        db, todo_id=id, is_completed=todo_in.is_completed, user_id=current_user.id
+        db, 
+        todo_id=id, 
+        user_id=current_user.id,
+        is_completed=todo_in.is_completed,
+        priority=todo_in.priority,
+        due_date=todo_in.due_date,
+        tags=todo_in.tags
     )
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
