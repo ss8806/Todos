@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api";
 import { useTodos } from "@/hooks/useTodos";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2, LogOut, CheckCircle, Circle, Loader2, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
   const [newTodo, setNewTodo] = useState("");
@@ -18,6 +19,13 @@ export default function Home() {
   const { todosQuery, addTodoMutation, toggleTodoMutation, deleteTodoMutation } = useTodos();
 
   const { data: todos, isLoading, isError } = todosQuery;
+
+  // エラー時にリダイレクト（useEffect内で呼び出す）
+  useEffect(() => {
+    if (isError) {
+      router.push("/login");
+    }
+  }, [isError, router]);
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +46,22 @@ export default function Home() {
     router.push("/login");
   };
 
-  if (isError) {
-    router.push("/login");
-    return null;
-  }
-
   const completedCount = todos?.filter((t) => t.is_completed).length ?? 0;
   const pendingCount = (todos?.length ?? 0) - completedCount;
+
+  // ローディング中はローディング表示
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
+      </div>
+    );
+  }
+
+  // エラー時は何も表示しない（リダイレクト実行中）
+  if (isError) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-black p-4 md:p-8">
@@ -54,10 +71,13 @@ export default function Home() {
             <h1 className="text-4xl font-extrabold tracking-tight">タスク</h1>
             <p className="text-zinc-500 dark:text-zinc-400 mt-1">タスクを管理しましょう。</p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            ログアウト
-          </Button>
+          <div className="flex gap-3">
+            <ThemeToggle />
+            <Button variant="outline" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              ログアウト
+            </Button>
+          </div>
         </div>
 
         <Card className="mb-8">
