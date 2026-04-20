@@ -17,6 +17,7 @@ dependencies = [
     "python-json-logger>=4.1.0",
     "python-multipart>=0.0.26",
     "scalar-fastapi>=1.8.2",
+    "slowapi>=0.1.9",
     "sqlmodel>=0.0.38",
     "uvicorn>=0.44.0",
 ]

@@ -47,6 +47,10 @@ Bearerトークンを使用して認証を行います。
         "http://localhost:8000",
     ]
 
+    # Rate Limiting 設定
+    RATE_LIMIT_DEFAULT: str = "100/minute"
+    RATE_LIMIT_LOGIN: str = "5/minute"
+
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"),
         extra="ignore"

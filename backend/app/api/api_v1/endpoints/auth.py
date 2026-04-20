@@ -1,12 +1,13 @@
 from datetime import timedelta
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import deps
 from app.core import security
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.crud import crud_user
 from app.schemas.user import UserCreate, UserRead
 from app.schemas.token import Token
@@ -14,7 +15,9 @@ from app.schemas.token import Token
 router = APIRouter(tags=["auth"])
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, summary="ユーザー登録", response_description="登録されたユーザー情報")
+@limiter.limit(settings.RATE_LIMIT_LOGIN)
 async def register(
+    request: Request,
     *,
     db: AsyncSession = Depends(deps.get_db),
     user_in: UserCreate
@@ -29,7 +32,9 @@ async def register(
     return user
 
 @router.post("/token", response_model=Token, summary="ログインアクセストークン取得", response_description="アクセストークン")
+@limiter.limit(settings.RATE_LIMIT_LOGIN)
 async def login_for_access_token(
+    request: Request,
     db: AsyncSession = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
 ) -> Any:

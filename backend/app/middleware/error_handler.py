@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from app.schemas.error import ErrorResponse, ValidationErrorDetail
 
@@ -114,7 +115,34 @@ def get_error_message(status_code: int) -> str:
         404: "お探しのリソースが見つかりません",
         409: "リソースの競合が発生しました",
         422: "リクエストデータが不正です",
+        429: "リクエスト制限超过了。しばらく待ってから再度お試しください",
         500: "サーバー内部エラーが発生しました",
         503: "サービスが利用できません"
     }
     return messages.get(status_code, "エラーが発生しました")
+
+
+async def rate_limit_exception_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+    """
+    Rate Limit エラーのハンドラー
+    """
+    error_response = ErrorResponse(
+        status_code=429,
+        detail="Rate limit exceeded",
+        message="リクエスト制限超过了。しばらく待ってから再度お試しください",
+        error_code="RATE_LIMIT_EXCEEDED"
+    )
+    
+    logger.warning(
+        "Rate limit exceeded",
+        extra={
+            "url": str(request.url),
+            "method": request.method,
+            "client_host": request.client.host if request.client else None
+        }
+    )
+    
+    return JSONResponse(
+        status_code=429,
+        content=error_response.model_dump()
+    )
