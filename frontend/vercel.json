@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "buildCommand": "bun run build",
+  "devCommand": "bun dev",
+  "installCommand": "bun install",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "regions": ["hnd1"],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://todo-backend-demo.onrender.com/api/v1"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_API_URL": "https://todo-backend-demo.onrender.com/api/v1"
+    }
+  }
+}

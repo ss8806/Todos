@@ -1,5 +1,8 @@
 # Todo Application
 
+![CI](https://github.com/ss8806/Todos/workflows/CI/badge.svg)
+[![codecov](https://codecov.io/gh/ss8806/Todos/branch/main/graph/badge.svg)](https://codecov.io/gh/ss8806/Todos)
+
 A modern Todo application built with FastAPI, Next.js, and PostgreSQL.
 
 ## Overview
@@ -15,6 +18,14 @@ This is a full-stack Todo application that provides user authentication and Todo
 - **Structured Logging**: JSON-formatted application logs
 - **Error Handling**: Unified error responses and toast notifications
 - **Health Checks**: System health monitoring endpoints
+
+## Screenshots
+
+### Login Page
+![Login Page](public/images/login-screen.png)
+
+### Todo Dashboard
+![Todo Dashboard](public/images/todo-list.png)
 
 ## Tech Stack
 
@@ -48,12 +59,70 @@ This is a full-stack Todo application that provides user authentication and Todo
 
 ## Architecture
 
+### System Overview
+
 ```
-┌─────────────┐         ┌──────────────┐         ┌──────────────┐
-│  Frontend   │◄───────►│   Backend    │◄───────►│   Database   │
-│  Next.js    │  HTTP   │   FastAPI    │  SQL    │  PostgreSQL  │
-│  (Port 3000)│  JSON   │  (Port 8000) │         │  (Port 5432) │
-└─────────────┘         └──────────────┘         └──────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        Client Browser                         │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ HTTP/HTTPS
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                      Frontend (Next.js)                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │  App Router  │  │  Components  │  │   React Query       │  │
+│  │  Pages       │  │  (shadcn/ui) │  │   (State Mgmt)      │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐                           │
+│  │  React Hook  │  │   Zod        │                           │
+│  │  Form        │  │  Validation  │                           │
+│  └──────────────┘  └──────────────┘                           │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ REST API (JSON)
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     Backend (FastAPI)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │  API Routes  │  │  Auth (JWT)  │  │   Rate Limiting     │  │
+│  │  (api_v1)    │  │  python-jose │  │   (SlowAPI)         │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │  SQLModel    │  │  CRUD Ops    │  │   Structured        │  │
+│  │  (ORM)       │  │  (db layer)  │  │   Logging           │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ SQLAlchemy (async)
+                           ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Database (PostgreSQL)                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐  │
+│  │  users       │  │   todos      │  │   alembic_version   │  │
+│  └──────────────┘  └──────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+#### Authentication Flow
+```
+Client → POST /api/v1/auth/register → Create User (Argon2 hash)
+Client → POST /api/v1/auth/token → JWT Token (15min expiry)
+Client → GET /api/v1/todos/ [Bearer Token] → Verify Token → Return Todos
+```
+
+#### Todo CRUD Flow
+```
+Client → POST /api/v1/todos/ {title, priority, due_date, tags}
+       → Validate (Pydantic) → Create (SQLModel) → Return Todo
+
+Client → GET /api/v1/todos/?search=&is_completed=&priority=&sort_by=
+       → Filter/Sort → Paginate → Return List
+
+Client → PUT /api/v1/todos/{id} {is_completed, priority, due_date, tags}
+       → Update Fields → Commit → Return Updated Todo
+
+Client → DELETE /api/v1/todos/{id}
+       → Find & Delete → Commit → Return Status
 ```
 
 ### API Endpoints
