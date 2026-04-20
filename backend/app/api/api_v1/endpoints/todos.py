@@ -10,7 +10,7 @@ from app.schemas.todo import TodoCreate, TodoRead, TodoUpdate
 
 router = APIRouter(tags=["todos"])
 
-@router.get("/", response_model=List[TodoRead], summary="TODO一覧取得", response_description="TODOリスト", security=[{"BearerAuth": []}])
+@router.get("/", response_model=List[TodoRead], summary="TODO一覧取得", response_description="TODOリスト")
 async def read_todos(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
@@ -18,7 +18,7 @@ async def read_todos(
     todos = await crud_todo.get_todos(db, user_id=current_user.id)
     return todos
 
-@router.post("/", response_model=TodoRead, summary="TODO作成", response_description="作成されたTODO", security=[{"BearerAuth": []}])
+@router.post("/", response_model=TodoRead, summary="TODO作成", response_description="作成されたTODO")
 async def create_todo(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -28,7 +28,7 @@ async def create_todo(
     todo = await crud_todo.create_todo(db, todo=todo_in, user_id=current_user.id)
     return todo
 
-@router.put("/{id}", response_model=TodoRead, summary="TODO更新", response_description="更新されたTODO", security=[{"BearerAuth": []}])
+@router.put("/{id}", response_model=TodoRead, summary="TODO更新", response_description="更新されたTODO")
 async def update_todo(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -43,7 +43,7 @@ async def update_todo(
         raise HTTPException(status_code=404, detail="Todo not found")
     return todo
 
-@router.delete("/{id}", summary="TODO削除", response_description="削除結果", security=[{"BearerAuth": []}])
+@router.delete("/{id}", summary="TODO削除", response_description="削除結果")
 async def delete_todo(
     *,
     db: AsyncSession = Depends(deps.get_db),
