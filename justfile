@@ -39,6 +39,30 @@ clean-db:
     docker compose down -v
     docker compose up -d db
 
+# Alembic マイグレーションを適用
+db-migrate:
+    cd backend && uv run alembic upgrade head
+
+# Alembic マイグレーションをロールバック
+db-rollback:
+    cd backend && uv run alembic downgrade -1
+
+# Alembic 新規マイグレーションファイルを作成
+db-revision:
+    @if [ -z "$MESSAGE" ]; then \
+        echo "Usage: just db-revision MESSAGE=\"description\""; \
+        exit 1; \
+    fi
+    cd backend && uv run alembic revision --autogenerate -m "$MESSAGE"
+
+# Alembic 現在のバージョン確認
+db-version:
+    cd backend && uv run alembic current
+
+# Alembic マイグレーション履歴確認
+db-history:
+    cd backend && uv run alembic history --verbose
+
 # プロジェクトの状態を確認
 status:
     docker compose ps
