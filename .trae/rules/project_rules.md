@@ -7,6 +7,7 @@
 - **Backend**: FastAPI, Python 3.13, uv
 - **Database**: PostgreSQL (Docker Compose)
 - **VCS**: Jujutsu (jj)
+  - `jj describe -m` 等でコミットメッセージを記述する際は、必ず**日本語**を使用すること。
 - **Task Runner**: just
 
 ## 2. 開発ルール
