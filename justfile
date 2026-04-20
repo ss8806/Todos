@@ -1,16 +1,18 @@
 # Todo Project Tasks
 
-# 全てのサービス（DB, backend, frontend）をDockerで起動
+# DBのみDockerで起動
 up:
-    docker compose up -d --build
+    docker compose up -d
 
-# 全てのサービスを停止
-down:
-    docker compose down
-
-# ログを表示
-logs:
-    docker compose logs -f
+# 開発環境を起動 (DB, Backend, Frontend すべてを一つのターミナルで実行)
+dev:
+    @just up
+    @echo "Starting backend and frontend..."
+    cd frontend && bunx concurrently \
+        -n "Backend,Frontend" \
+        -c "cyan,magenta" \
+        "cd ../backend && uv run uvicorn app.main:app --reload" \
+        "bun dev"
 
 # データベースのログを表示
 db-logs:
@@ -31,6 +33,11 @@ backend-dev:
 # ローカル開発用: フロントエンドを起動 (bun)
 frontend-dev:
     cd frontend && bun dev
+
+# データベースの状態をリセット (ボリュームも削除)
+clean-db:
+    docker compose down -v
+    docker compose up -d db
 
 # プロジェクトの状態を確認
 status:

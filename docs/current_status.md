@@ -8,8 +8,9 @@
 - **Framework**: FastAPI
 - **Python**: 3.13 (Docker), 3.10+ (Local)
 - **Package Manager**: `uv`
-- **主要ライブラリ**: `fastapi`, `uvicorn`, `sqlalchemy`, `psycopg2-binary`, `python-jose`, `passlib`, `alembic`
+- **主要ライブラリ**: `sqlmodel`, `asyncpg`, `scalar-fastapi`, `python-multipart`, `greenlet`, `uvicorn`, `python-jose`, `passlib`, `alembic`
 - **エントリーポイント**: `backend/app/main.py`
+- **APIドキュメント**: `/docs` (Scalar)
 
 ### **フロントエンド (Frontend)**
 - **Framework**: Next.js (App Router)
@@ -29,11 +30,18 @@
 ```text
 Todo/
 ├── backend/            # FastAPI + uv
+│   ├── app/
+│   │   ├── api/        # エンドポイント
+│   │   ├── core/       # 設定、セキュリティ、DB接続
+│   │   ├── crud/       # DB操作
+│   │   ├── models/     # DBモデル (SQLModel)
+│   │   ├── schemas/    # Pydanticモデル
+│   │   └── main.py     # エントリーポイント
 ├── frontend/           # Next.js + Bun
 ├── docker/             # Dockerfile (backend/frontend)
-├── docs/               # ドキュメント (本ファイル)
+├── docs/               # ドキュメント
 ├── docker-compose.yml  # サービス管理
-├── justfile            # タスクランナー (コマンド集)
+├── justfile            # タスクランナー
 └── SPECIFICATION.md    # アプリ仕様書
 ```
 
@@ -59,11 +67,11 @@ Todo/
 | :--- | :--- | :--- |
 | インフラ構築 | ✅ 完了 | Docker, DB, Network設定済み |
 | プロジェクト初期化 | ✅ 完了 | backend(uv), frontend(bun) 初期化済み |
-| DBスキーマ設計 | ✅ 完了 | 仕様書に定義済み |
+| DBスキーマ設計 | ✅ 完了 | SQLModelによる統合済み |
 | API設計 | ✅ 完了 | 仕様書に定義済み |
-| DB接続実装 | ⏳ 未着手 | SQLAlchemyの設定が必要 |
-| 認証機能実装 | ⏳ 未着手 | JWT, Login/Registerが必要 |
-| Todo機能実装 | ⏳ 未着手 | CRUDのAPIとUIが必要 |
+| DB接続実装 | ✅ 完了 | SQLModel + AsyncSession (asyncpg) |
+| 認証機能実装 | ⏳ 進行中 | 非同期化済み、テストが必要 |
+| Todo機能実装 | ⏳ 進行中 | 非同期化済み、テストが必要 |
 
 ---
 
