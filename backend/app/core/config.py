@@ -3,6 +3,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Todo API"
+    PROJECT_VERSION: str = "0.1.0"
+    PROJECT_DESCRIPTION: str = """
+Todo Management API System
+
+このAPIは、TODOアイテムの作成・取得・更新・削除と、
+ユーザー認証・管理機能を提供します。
+
+## 機能
+- **認証**: JWTベースのユーザー認証
+- **TODO管理**: タスクのCRUD操作
+- **ユーザー管理**: ユーザー情報の管理
+
+## 認証
+Bearerトークンを使用して認証を行います。
+ログイン後、受け取ったトークンを`Authorization`ヘッダーに設定してください。
+"""
     API_V1_STR: str = "/api/v1"
     
     # 環境変数から読み込む、デフォルト値はローカルDBを想定

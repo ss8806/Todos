@@ -11,9 +11,9 @@ from app.crud import crud_user
 from app.schemas.user import UserCreate, UserRead
 from app.schemas.token import Token
 
-router = APIRouter()
+router = APIRouter(tags=["auth"])
 
-@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, summary="ユーザー登録", response_description="登録されたユーザー情報")
 async def register(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -28,7 +28,7 @@ async def register(
     user = await crud_user.create_user(db, user=user_in)
     return user
 
-@router.post("/token", response_model=Token)
+@router.post("/token", response_model=Token, summary="ログインアクセストークン取得", response_description="アクセストークン")
 async def login_for_access_token(
     db: AsyncSession = Depends(deps.get_db),
     form_data: OAuth2PasswordRequestForm = Depends()
