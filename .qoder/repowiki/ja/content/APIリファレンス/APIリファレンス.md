@@ -1,24 +1,25 @@
 # APIリファレンス
 
 <cite>
-**このドキュメントで参照されるファイル**
+**この文書で参照されるファイル**
 - [backend/app/main.py](file://backend/app/main.py)
 - [backend/app/api/api_v1/api.py](file://backend/app/api/api_v1/api.py)
 - [backend/app/api/api_v1/endpoints/auth.py](file://backend/app/api/api_v1/endpoints/auth.py)
 - [backend/app/api/api_v1/endpoints/users.py](file://backend/app/api/api_v1/endpoints/users.py)
 - [backend/app/api/api_v1/endpoints/todos.py](file://backend/app/api/api_v1/endpoints/todos.py)
 - [backend/app/api/deps.py](file://backend/app/api/deps.py)
-- [backend/app/core/security.py](file://backend/app/core/security.py)
 - [backend/app/core/config.py](file://backend/app/core/config.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
-- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
-- [backend/app/models/todo.py](file://backend/app/models/todo.py)
+- [backend/app/core/security.py](file://backend/app/core/security.py)
 - [backend/app/models/user.py](file://backend/app/models/user.py)
-- [backend/app/schemas/todo.py](file://backend/app/schemas/todo.py)
+- [backend/app/models/todo.py](file://backend/app/models/todo.py)
 - [backend/app/schemas/user.py](file://backend/app/schemas/user.py)
+- [backend/app/schemas/todo.py](file://backend/app/schemas/todo.py)
 - [backend/app/schemas/token.py](file://backend/app/schemas/token.py)
-- [backend/main.py](file://backend/main.py)
-- [docs/current_status.md](file://docs/current_status.md)
+- [backend/app/schemas/error.py](file://backend/app/schemas/error.py)
+- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
+- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
+- [backend/app/middleware/error_handler.py](file://backend/app/middleware/error_handler.py)
+- [backend/pyproject.toml](file://backend/pyproject.toml)
 </cite>
 
 ## 目次
@@ -26,441 +27,423 @@
 2. [プロジェクト構造](#プロジェクト構造)
 3. [コアコンポーネント](#コアコンポーネント)
 4. [アーキテクチャ概観](#アーキテクチャ概観)
-5. [詳細コンポーネント分析](#詳細コンポーネント分析)
+5. [詳細なコンポーネント分析](#詳細なコンポーネント分析)
 6. [依存関係分析](#依存関係分析)
-7. [性能に関する考慮事項](#性能に関する考慮事項)
+7. [パフォーマンス考慮事項](#パフォーマンス考慮事項)
 8. [トラブルシューティングガイド](#トラブルシューティングガイド)
 9. [結論](#結論)
 10. [付録](#付録)
 
 ## はじめに
-本ドキュメントは、TodoプロジェクトにおけるAPIエンドポイントを網羅的にドキュメント化したものです。現在実装されているエンドポイント（/、/health）と既に完成しているエンドポイント（/auth/register、/auth/token、/users/me、/todosなど）について、HTTPメソッド、URLパターン、リクエスト/レスポンススキーマ、認証方法を詳細に記述します。JWTトークンの使用方法、エラーレスポンスの形式、ステータスコードの意味、クエリパラメータの指定方法を説明します。また、実際のリクエスト/レスポンス例を含め、クライアント実装のガイドラインとパフォーマンス最適化のヒントを提供します。
+本APIリファレンスは、Todo管理システムのRESTful APIエンドポイントの詳細仕様を提供します。認証エンドポイント（/api/v1/auth/register、/api/v1/auth/token）、TODO管理エンドポイント（GET/POST/PUT/DELETE /api/v1/todos/）、ユーザー情報エンドポイント（/api/v1/users/me）について、HTTPメソッド、URLパターン、リクエスト/レスポンススキーマ、認証要件、エラーレスポンスを網羅的に記述します。また、APIドキュメント（Scalar、OpenAPI JSON）の利用方法についても説明します。
 
 ## プロジェクト構造
-バックエンドはFastAPIフレームワークを使用しており、アプリケーションのエントリーポイントは以下の2か所に存在します：
-- backend/app/main.py：FastAPIアプリケーションのルート定義（ルーティング、依存関係注入、例外ハンドリング、OpenAPIカスタマイズ）
-- backend/main.py：ASGIサーバー起動用のエントリーポイント（uvicorn）
-
-APIバージョン管理は /api/v1 で行われており、エンドポイントは以下のモジュールで管理されています：
-- backend/app/api/api_v1/endpoints/auth.py：認証エンドポイント（登録、トークン取得）
-- backend/app/api/api_v1/endpoints/users.py：ユーザー情報エンドポイント（現在のユーザー取得）
-- backend/app/api/api_v1/endpoints/todos.py：TODO管理エンドポイント（一覧、作成、更新、削除）
-
-データベース接続、スキーマ定義、CRUD操作、設定管理はそれぞれ以下のモジュールで管理されています：
-- backend/app/core/db.py：DB接続設定、セッション管理
-- backend/app/models/：SQLModelモデル定義
-- backend/app/schemas/：Pydanticスキーマ定義（リクエスト/レスポンス）
-- backend/app/crud/：データアクセス層（CRUD操作）
-- backend/app/core/config.py：環境変数・設定管理
+バックエンドアプリケーションはFastAPIフレームワークを使用し、以下の構造で構成されています：
 
 ```mermaid
 graph TB
-client["クライアント"]
-fastapi_app["FastAPIアプリケーション<br/>backend/app/main.py"]
-api_router["APIルーター<br/>backend/app/api/api_v1/api.py"]
-auth_endpoint["認証エンドポイント<br/>/api/v1/auth/*"]
-users_endpoint["ユーザーエンドポイント<br/>/api/v1/users/*"]
-todos_endpoint["TODOエンドポイント<br/>/api/v1/todos/*"]
-deps["依存関係<br/>backend/app/api/deps.py"]
-security["セキュリティ<br/>backend/app/core/security.py"]
-db["データベース接続<br/>backend/app/core/db.py"]
-models["モデル定義<br/>backend/app/models/*"]
-schemas["スキーマ定義<br/>backend/app/schemas/*"]
-crud["CRUD操作<br/>backend/app/crud/*"]
-config["設定管理<br/>backend/app/core/config.py"]
-client --> fastapi_app
-fastapi_app --> api_router
-api_router --> auth_endpoint
-api_router --> users_endpoint
-api_router --> todos_endpoint
-fastapi_app --> deps
-deps --> security
-fastapi_app --> db
-db --> models
-fastapi_app --> schemas
-fastapi_app --> crud
-fastapi_app --> config
+subgraph "API層"
+APIRouter[APIルーター]
+AuthRouter[認証ルーター]
+UsersRouter[ユーザー管理ルーター]
+TodosRouter[TODOS管理ルーター]
+end
+subgraph "ビジネスロジック層"
+CRUDUser[CRUD: ユーザー]
+CRUDTodo[CRUD: TODO]
+Security[セキュリティ]
+end
+subgraph "データモデル層"
+UserModel[ユーザー]
+TodoModel[TODOS]
+end
+subgraph "設定層"
+Config[設定]
+Deps[依存関係]
+end
+APIRouter --> AuthRouter
+APIRouter --> UsersRouter
+APIRouter --> TodosRouter
+AuthRouter --> CRUDUser
+UsersRouter --> CRUDUser
+TodosRouter --> CRUDTodo
+CRUDUser --> UserModel
+CRUDTodo --> TodoModel
+AuthRouter --> Security
+TodosRouter --> Security
+APIRouter --> Deps
+Deps --> Config
 ```
 
 **図の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-- [backend/app/api/api_v1/api.py](file://backend/app/api/api_v1/api.py)
-- [backend/app/api/deps.py](file://backend/app/api/deps.py)
-- [backend/app/core/security.py](file://backend/app/core/security.py)
-- [backend/app/core/config.py](file://backend/app/core/config.py)
+- [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
+- [backend/app/main.py:124](file://backend/app/main.py#L124)
 
 **節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-- [backend/main.py](file://backend/main.py)
+- [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
+- [backend/app/main.py:124](file://backend/app/main.py#L124)
 
 ## コアコンポーネント
-- FastAPIアプリケーション：ルート定義、例外ハンドリング、依存関係注入、OpenAPIセキュリティスキーマのカスタマイズ
-- 認証：JWTベースの認証（OAuth2PasswordBearer、トークン検証）
-- TODO管理：CRUD操作（一覧取得、作成、更新、削除）
-- DB接続：SQLModel、非同期接続（asyncpg）
+本システムのコアコンポーネントは以下の通りです：
+
+- **APIルーター**: `/api/v1`プレフィックスを持つ3つのサブルーター（auth、users、todos）
+- **セキュリティ層**: JWTベースの認証、パスワードハッシュ化、トークン生成
+- **CRUD層**: ユーザーとTODOのデータアクセスロジック
+- **データモデル**: SQLModelを使用したORMモデル
+- **エラーハンドリング**: 統一エラーレスポンススキーマ
 
 **節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-- [backend/app/core/config.py](file://backend/app/core/config.py)
+- [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
+- [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
+- [backend/app/crud/crud_user.py:1-22](file://backend/app/crud/crud_user.py#L1-L22)
+- [backend/app/crud/crud_todo.py:1-119](file://backend/app/crud/crud_todo.py#L1-L119)
 
 ## アーキテクチャ概観
-以下は、APIの全体像を示す概念図です。具体的なエンドポイントの実装は、backend/app/api/api_v1/endpoints/配下に定義されています。
+全体のアーキテクチャは以下のようになります：
 
 ```mermaid
 graph TB
-subgraph "クライアント"
-web["Web/モバイルクライアント"]
+Client[クライアントアプリケーション]
+subgraph "FastAPIアプリケーション"
+Main[main.py]
+Router[APIルーター]
+Middleware[ミドルウェア]
+ErrorHandler[エラーハンドラー]
 end
-subgraph "バックエンド"
-app["FastAPIアプリケーション<br/>backend/app/main.py"]
-auth["認証モジュール<br/>JWT + OAuth2PasswordBearer"]
-users["ユーザー管理モジュール<br/>CRUD"]
-todos["TODO管理モジュール<br/>CRUD"]
-deps["依存関係<br/>get_current_user"]
-security["セキュリティ<br/>create_access_token/verify_password"]
-db["DB接続<br/>SQLModel + asyncpg"]
+subgraph "認証層"
+OAuth2[OAuth2PasswordBearer]
+JWT[JWTトークン]
+Password[パスワードハッシュ]
 end
-web --> app
-app --> auth
-app --> users
-app --> todos
-todos --> deps
-deps --> security
-users --> db
-todos --> db
+subgraph "データ層"
+DB[(データベース)]
+SQLModel[SQLModel ORM]
+end
+Client --> Main
+Main --> Router
+Router --> Middleware
+Middleware --> ErrorHandler
+Router --> OAuth2
+OAuth2 --> JWT
+JWT --> Password
+Router --> SQLModel
+SQLModel --> DB
 ```
 
-## 詳細コンポーネント分析
+**図の出典**
+- [backend/app/main.py:49-102](file://backend/app/main.py#L49-L102)
+- [backend/app/api/deps.py:10](file://backend/app/api/deps.py#L10)
+- [backend/app/core/security.py:17-34](file://backend/app/core/security.py#L17-L34)
 
-### 現在実装されているエンドポイント
-
-#### エンドポイント：/
-- HTTPメソッド：GET
-- URLパターン：/
-- 認証：不要
-- 応答：JSON（例：{"message": "Welcome to Todo API"}）
-- 備考：ルートエンドポイントとして基本的な応答を返すことを目的としています。
-
-**節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-
-#### エンドポイント：/health
-- HTTPメソッド：GET
-- URLパターン：/health
-- 認証：不要
-- 応答：JSON（例：{"status": "ok", "database": "connected"}）
-- 備考：稼働確認用のシンプルなエンドポイントです。
-
-**節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-
-#### エンドポイント：/docs
-- HTTPメソッド：GET
-- URLパターン：/docs
-- 認証：不要
-- 応答：HTML（Scalar API Reference）
-- 備考：Swagger代わりのScalarドキュメントを提供します。
-
-**節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
+## 詳細なコンポーネント分析
 
 ### 認証エンドポイント
 
-#### エンドポイント：/api/v1/auth/register
-- HTTPメソッド：POST
-- URLパターン：/api/v1/auth/register
-- 認証：不要
-- リクエストボディスキーマ：UserCreate（username, password）
-- 応答：JSON（例：UserRead）
-- 備考：ユーザー登録処理を担当します。
+#### ユーザー登録エンドポイント
+- **URL**: `/api/v1/auth/register`
+- **メソッド**: POST
+- **認証不要**: はい
+- **リクエストボディ**: UserCreateスキーマ
+  - username: 文字列（最大50文字、一意）
+  - password: 文字列（ハッシュ化済み）
+- **レスポンス**: UserReadスキーマ
+  - id: UUID
+  - username: 文字列
+- **ステータスコード**:
+  - 201: 登録成功
+  - 400: 既存ユーザーまたはバリデーションエラー
+
+```mermaid
+sequenceDiagram
+participant Client as クライアント
+participant Auth as 認証ルーター
+participant CRUD as CRUDユーザー
+participant DB as データベース
+Client->>Auth : POST /api/v1/auth/register
+Auth->>Auth : 重複チェック
+Auth->>CRUD : create_user()
+CRUD->>DB : INSERT
+DB-->>CRUD : 新規ユーザー
+CRUD-->>Auth : UserRead
+Auth-->>Client : 201 Created + UserRead
+```
+
+**図の出典**
+- [backend/app/api/api_v1/endpoints/auth.py:17-32](file://backend/app/api/api_v1/endpoints/auth.py#L17-L32)
+- [backend/app/crud/crud_user.py:12-21](file://backend/app/crud/crud_user.py#L12-L21)
+
+#### トークン取得エンドポイント
+- **URL**: `/api/v1/auth/token`
+- **メソッド**: POST
+- **認証不要**: はい
+- **リクエスト**: OAuth2PasswordRequestForm
+  - username: 文字列
+  - password: 文字列
+- **レスポンス**: Tokenスキーマ
+  - access_token: 文字列（JWT）
+  - token_type: 文字列（bearer）
+- **ステータスコード**:
+  - 200: トークン発行成功
+  - 401: 認証失敗
+
+```mermaid
+sequenceDiagram
+participant Client as クライアント
+participant Auth as 認証ルーター
+participant CRUD as CRUDユーザー
+participant Security as セキュリティ
+Client->>Auth : POST /api/v1/auth/token
+Auth->>CRUD : get_user_by_username()
+CRUD-->>Auth : User
+Auth->>Security : verify_password()
+Security-->>Auth : 検証結果
+Auth->>Security : create_access_token()
+Security-->>Auth : JWTトークン
+Auth-->>Client : 200 OK + Token
+```
+
+**図の出典**
+- [backend/app/api/api_v1/endpoints/auth.py:34-52](file://backend/app/api/api_v1/endpoints/auth.py#L34-L52)
+- [backend/app/core/security.py:17-27](file://backend/app/core/security.py#L17-L27)
 
 **節の出典**
-- [backend/app/api/api_v1/endpoints/auth.py](file://backend/app/api/api_v1/endpoints/auth.py)
-- [backend/app/schemas/user.py](file://backend/app/schemas/user.py)
-- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
-
-#### エンドポイント：/api/v1/auth/token
-- HTTPメソッド：POST
-- URLパターン：/api/v1/auth/token
-- 認証：不要（OAuth2PasswordRequestFormを使用）
-- リクエストボディスキーマ：OAuth2PasswordRequestForm（username, password）
-- 応答：JSON（例：{"access_token": "JWTトークン", "token_type": "bearer"}）
-- 備考：JWTベースの認証を行うためのアクセストークン取得エンドポイントです。
-
-**節の出典**
-- [backend/app/api/api_v1/endpoints/auth.py](file://backend/app/api/api_v1/endpoints/auth.py)
-- [backend/app/schemas/token.py](file://backend/app/schemas/token.py)
-- [backend/app/core/security.py](file://backend/app/core/security.py)
-- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
-
-### ユーザー管理エンドポイント
-
-#### エンドポイント：/api/v1/users/me
-- HTTPメソッド：GET
-- URLパターン：/api/v1/users/me
-- 認証：JWT必須（Authorization: Bearer {JWTトークン}）
-- 応答：JSON（例：UserRead）
-- 備考：現在認証中のユーザー情報を取得します。
-
-**節の出典**
-- [backend/app/api/api_v1/endpoints/users.py](file://backend/app/api/api_v1/endpoints/users.py)
-- [backend/app/schemas/user.py](file://backend/app/schemas/user.py)
-- [backend/app/api/deps.py](file://backend/app/api/deps.py)
+- [backend/app/api/api_v1/endpoints/auth.py:17-52](file://backend/app/api/api_v1/endpoints/auth.py#L17-L52)
+- [backend/app/schemas/user.py:7-12](file://backend/app/schemas/user.py#L7-L12)
+- [backend/app/schemas/token.py:4-6](file://backend/app/schemas/token.py#L4-L6)
 
 ### TODO管理エンドポイント
 
-#### エンドポイント：/api/v1/todos
-- HTTPメソッド：GET
-- URLパターン：/api/v1/todos
-- 認証：JWT必須（Authorization: Bearer {JWTトークン}）
-- 応答：JSON（例：TodoReadの配列）
-- 備考：認証ユーザーのTODO一覧を取得します。
+#### TODO一覧取得
+- **URL**: `/api/v1/todos/`
+- **メソッド**: GET
+- **認証**: 必須（Bearerトークン）
+- **クエリパラメータ**:
+  - skip: 整数（デフォルト0、0以上）
+  - limit: 整数（デフォルト100、1-100範囲）
+  - search: 文字列（検索キーワード）
+  - is_completed: 真偽値（完了状態フィルター）
+  - priority: 文字列（high/medium/low）
+  - tags: 文字列（カンマ区切りタグ）
+  - sort_by: 文字列（created_at/priority/due_date、デフォルトcreated_at）
+  - sort_order: 文字列（asc/desc、デフォルトdesc）
+- **レスポンス**: TodoReadスキーマの配列
+- **ステータスコード**: 200
 
-**節の出典**
-- [backend/app/api/api_v1/endpoints/todos.py](file://backend/app/api/api_v1/endpoints/todos.py)
-- [backend/app/schemas/todo.py](file://backend/app/schemas/todo.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
+#### TODO作成
+- **URL**: `/api/v1/todos/`
+- **メソッド**: POST
+- **認証**: 必須（Bearerトークン）
+- **リクエストボディ**: TodoCreateスキーマ
+  - title: 文字列（必須、最大255文字）
+  - is_completed: 真偽値（デフォルトfalse）
+  - priority: 文字列（high/medium/low、デフォルトlow）
+  - due_date: 日時（任意）
+  - tags: 文字列（最大500文字、任意）
+- **レスポンス**: TodoReadスキーマ
+- **ステータスコード**: 201
 
-#### エンドポイント：/api/v1/todos
-- HTTPメソッド：POST
-- URLパターン：/api/v1/todos
-- 認証：JWT必須（Authorization: Bearer {JWTトークン}）
-- リクエストボディスキーマ：TodoCreate（title, is_completed）
-- 応答：JSON（例：TodoRead）
-- 備考：新しいTODOを作成します。
+#### TODO更新
+- **URL**: `/api/v1/todos/{id}`
+- **メソッド**: PUT
+- **認証**: 必須（Bearerトークン）
+- **パスパラメータ**: id: UUID
+- **リクエストボディ**: TodoUpdateスキーマ（任意フィールド）
+- **レスポンス**: TodoReadスキーマ
+- **ステータスコード**:
+  - 200: 更新成功
+  - 404: TODO未検出
 
-**節の出典**
-- [backend/app/api/api_v1/endpoints/todos.py](file://backend/app/api/api_v1/endpoints/todos.py)
-- [backend/app/schemas/todo.py](file://backend/app/schemas/todo.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
+#### TODO削除
+- **URL**: `/api/v1/todos/{id}`
+- **メソッド**: DELETE
+- **認証**: 必須（Bearerトークン）
+- **パスパラメータ**: id: UUID
+- **レスポンス**: 成功メッセージ（JSON）
+- **ステータスコード**: 200
 
-#### エンドポイント：/api/v1/todos/{id}
-- HTTPメソッド：PUT
-- URLパターン：/api/v1/todos/{id}
-- 認証：JWT必須（Authorization: Bearer {JWTトークン}）
-- リクエストボディスキーマ：TodoUpdate（is_completed）
-- 応答：JSON（例：TodoRead）
-- 備考：指定されたTODOを更新します。
-
-**節の出典**
-- [backend/app/api/api_v1/endpoints/todos.py](file://backend/app/api/api_v1/endpoints/todos.py)
-- [backend/app/schemas/todo.py](file://backend/app/schemas/todo.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
-
-#### エンドポイント：/api/v1/todos/{id}
-- HTTPメソッド：DELETE
-- URLパターン：/api/v1/todos/{id}
-- 認証：JWT必須（Authorization: Bearer {JWTトークン}）
-- 応答：JSON（例：{"status": "success"}）
-- 備考：指定されたTODOを削除します。
-
-**節の出典**
-- [backend/app/api/api_v1/endpoints/todos.py](file://backend/app/api/api_v1/endpoints/todos.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
-
-### JWTトークンの使用方法
-- 送信方法：AuthorizationヘッダーにBearerトークン形式で送信
-- 例：Authorization: Bearer {JWTトークン}
-- 使用場所：/api/v1/users/me、/api/v1/todos系エンドポイント
-- トークンの有効期限：ACCESS_TOKEN_EXPIRE_MINUTESで設定（デフォルト30分）
-
-**節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-- [backend/app/api/deps.py](file://backend/app/api/deps.py)
-- [backend/app/core/config.py](file://backend/app/core/config.py)
-
-### エラーレスポンスの形式
-- 形式：JSON
-- 応答例：{"detail": "エラー内容"}
-- 用途：エンドポイント全体で共通のエラーレスポンス形式を採用
-
-**節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-
-### ステータスコードの意味
-- 200 OK：成功（GET/PUT/DELETE）
-- 201 Created：作成成功（POST）
-- 400 Bad Request：リクエスト不正（重複ユーザー登録など）
-- 401 Unauthorized：認証失敗（無効なトークン、パスワード不正）
-- 404 Not Found：リソースなし（存在しないTODO ID）
-- 500 Internal Server Error：サーバーエラー
-
-**節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-
-### 実装フロー（認証・TODO管理）
-
-#### 認証フロー（JWT）
 ```mermaid
-sequenceDiagram
-participant Client as "クライアント"
-participant API as "APIエンドポイント"
-participant Auth as "認証モジュール"
-participant DB as "データベース"
-Client->>API : POST /api/v1/auth/register
-API->>Auth : ユーザー登録処理
-Auth->>DB : 新規ユーザー登録パスワードハッシュ化
-DB-->>Auth : 登録完了
-Auth-->>API : 登録結果
-API-->>Client : 登録成功例：ユーザー情報
-Client->>API : POST /api/v1/auth/token
-API->>Auth : 認証処理
-Auth->>DB : ユーザー照会
-DB-->>Auth : 該当ユーザー
-Auth-->>API : JWT発行
-API-->>Client : JWTトークン
+flowchart TD
+Start([TODO操作開始]) --> AuthCheck["認証トークン検証"]
+AuthCheck --> AuthOK{"認証成功？"}
+AuthOK --> |いいえ| AuthError["401 Unauthorized"]
+AuthOK --> |はい| Operation{"操作種別"}
+Operation --> |GET| GetTodos["TODO一覧取得"]
+Operation --> |POST| CreateTodo["TODO作成"]
+Operation --> |PUT| UpdateTodo["TODO更新"]
+Operation --> |DELETE| DeleteTodo["TODO削除"]
+GetTodos --> Filter["フィルタリング・ソート・ページネーション"]
+CreateTodo --> Validate["バリデーション"]
+UpdateTodo --> FindTodo["TODO検索"]
+DeleteTodo --> FindTodo
+Filter --> ReturnGet["200 OK + Todoリスト"]
+Validate --> SaveCreate["保存"]
+FindTodo --> Found{"存在する？"}
+SaveCreate --> ReturnCreate["201 Created + Todo"]
+Found --> |はい| SaveUpdate["更新保存"]
+Found --> |いいえ| NotFound["404 Not Found"]
+SaveUpdate --> ReturnUpdate["200 OK + Todo"]
+ReturnCreate --> End([完了])
+ReturnGet --> End
+ReturnUpdate --> End
+NotFound --> End
+AuthError --> End
 ```
 
 **図の出典**
-- [backend/app/api/api_v1/endpoints/auth.py](file://backend/app/api/api_v1/endpoints/auth.py)
-- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
-- [backend/app/core/security.py](file://backend/app/core/security.py)
+- [backend/app/api/api_v1/endpoints/todos.py:13-79](file://backend/app/api/api_v1/endpoints/todos.py#L13-L79)
+- [backend/app/crud/crud_todo.py:9-119](file://backend/app/crud/crud_todo.py#L9-L119)
 
-#### TODO管理フロー
-```mermaid
-sequenceDiagram
-participant Client as "クライアント"
-participant API as "APIエンドポイント"
-participant Todo as "TODO管理"
-participant DB as "データベース"
-Client->>API : GET /api/v1/todos
-API->>Todo : TODO一覧取得
-Todo->>DB : SELECT TODO WHERE user_id
-DB-->>Todo : TODOリスト
-Todo-->>API : TODOリスト
-API-->>Client : TODOリスト
-Client->>API : POST /api/v1/todos
-API->>Todo : TODO作成
-Todo->>DB : INSERT TODO
-DB-->>Todo : 作成完了
-Todo-->>API : 作成結果
-API-->>Client : 作成されたTODO
-```
+**節の出典**
+- [backend/app/api/api_v1/endpoints/todos.py:13-79](file://backend/app/api/api_v1/endpoints/todos.py#L13-L79)
+- [backend/app/schemas/todo.py:13-33](file://backend/app/schemas/todo.py#L13-L33)
 
-**図の出典**
-- [backend/app/api/api_v1/endpoints/todos.py](file://backend/app/api/api_v1/endpoints/todos.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
+### ユーザー情報エンドポイント
 
-### 認証・スキーマ・CRUDのクラス構造
-```mermaid
-classDiagram
-class 認証スキーマ {
-+入力バリデーション
-+パスワードハッシュ化
-}
-class TODOスキーマ {
-+タイトル
-+完了フラグ
-+ユーザーID
-}
-class CRUD操作 {
-+作成()
-+取得()
-+更新()
-+削除()
-}
-class DB接続 {
-+セッション管理
-+トランザクション
-}
-認証スキーマ <.. CRUD操作 : "認証後利用"
-TODOスキーマ <.. CRUD操作 : "TODO管理"
-CRUD操作 --> DB接続 : "データベース操作"
-```
+#### 現在のユーザー情報取得
+- **URL**: `/api/v1/users/me`
+- **メソッド**: GET
+- **認証**: 必須（Bearerトークン）
+- **レスポンス**: UserReadスキーマ
+  - id: UUID
+  - username: 文字列
+- **ステータスコード**: 200
 
-**図の出典**
-- [backend/app/schemas/user.py](file://backend/app/schemas/user.py)
-- [backend/app/schemas/todo.py](file://backend/app/schemas/todo.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
-- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
+**節の出典**
+- [backend/app/api/api_v1/endpoints/users.py:9-13](file://backend/app/api/api_v1/endpoints/users.py#L9-L13)
+- [backend/app/schemas/user.py:10-12](file://backend/app/schemas/user.py#L10-L12)
 
 ## 依存関係分析
-- backend/app/main.py が各コンポーネント（api_v1.api、core.config、core.db）をインポートし、ルーティングと依存関係を統合
-- FastAPIアプリケーションは、エラーハンドリング、例外定義、ルート定義、OpenAPIセキュリティスキーマをbackend/app/main.pyで管理
-- 認証・TODO管理は、backend/app/api/deps.py、backend/app/core/security.py、backend/app/schemas/、backend/app/crud/、backend/app/models/、backend/app/core/config.py に依存
 
 ```mermaid
 graph TB
-main_py["backend/app/main.py"]
-api_py["backend/app/api/api_v1/api.py"]
-auth_py["backend/app/api/api_v1/endpoints/auth.py"]
-users_py["backend/app/api/api_v1/endpoints/users.py"]
-todos_py["backend/app/api/api_v1/endpoints/todos.py"]
-deps_py["backend/app/api/deps.py"]
-security_py["backend/app/core/security.py"]
-config_py["backend/app/core/config.py"]
-crud_todo_py["backend/app/crud/crud_todo.py"]
-crud_user_py["backend/app/crud/crud_user.py"]
-schemas_todo_py["backend/app/schemas/todo.py"]
-schemas_user_py["backend/app/schemas/user.py"]
-schemas_token_py["backend/app/schemas/token.py"]
-models_todo_py["backend/app/models/todo.py"]
-models_user_py["backend/app/models/user.py"]
-main_py --> api_py
-api_py --> auth_py
-api_py --> users_py
-api_py --> todos_py
-main_py --> deps_py
-deps_py --> security_py
-main_py --> config_py
-auth_py --> crud_user_py
-users_py --> deps_py
-todos_py --> crud_todo_py
-auth_py --> schemas_user_py
-auth_py --> schemas_token_py
-users_py --> schemas_user_py
-todos_py --> schemas_todo_py
-crud_todo_py --> models_todo_py
-crud_user_py --> models_user_py
+subgraph "外部依存"
+FastAPI[FastAPI]
+SQLModel[SQLModel]
+JWT[python-jose]
+Argon2[argon2-cffi]
+SlowAPI[slowapi]
+end
+subgraph "アプリケーション層"
+Main[main.py]
+API[api.py]
+Endpoints[エンドポイント]
+CRUD[CRUD]
+Models[モデル]
+Schemas[スキーマ]
+Security[セキュリティ]
+Config[設定]
+end
+FastAPI --> Main
+SQLModel --> Models
+JWT --> Security
+Argon2 --> Security
+SlowAPI --> Main
+Main --> API
+API --> Endpoints
+Endpoints --> CRUD
+CRUD --> Models
+Endpoints --> Schemas
+Endpoints --> Security
+Main --> Config
 ```
 
 **図の出典**
-- [backend/app/main.py](file://backend/app/main.py)
-- [backend/app/api/api_v1/api.py](file://backend/app/api/api_v1/api.py)
-- [backend/app/api/api_v1/endpoints/auth.py](file://backend/app/api/api_v1/endpoints/auth.py)
-- [backend/app/api/api_v1/endpoints/users.py](file://backend/app/api/api_v1/endpoints/users.py)
-- [backend/app/api/api_v1/endpoints/todos.py](file://backend/app/api/api_v1/endpoints/todos.py)
-- [backend/app/api/deps.py](file://backend/app/api/deps.py)
-- [backend/app/core/security.py](file://backend/app/core/security.py)
-- [backend/app/core/config.py](file://backend/app/core/config.py)
-- [backend/app/crud/crud_todo.py](file://backend/app/crud/crud_todo.py)
-- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
-- [backend/app/schemas/todo.py](file://backend/app/schemas/todo.py)
-- [backend/app/schemas/user.py](file://backend/app/schemas/user.py)
-- [backend/app/schemas/token.py](file://backend/app/schemas/token.py)
-- [backend/app/models/todo.py](file://backend/app/models/todo.py)
-- [backend/app/models/user.py](file://backend/app/models/user.py)
+- [backend/pyproject.toml:7-22](file://backend/pyproject.toml#L7-L22)
+- [backend/app/main.py:11-124](file://backend/app/main.py#L11-L124)
 
 **節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
+- [backend/pyproject.toml:1-47](file://backend/pyproject.toml#L1-L47)
 
-## 性能に関する考慮事項
-- 非同期処理：データベース接続や外部API呼び出しには非同期処理を活用
-- キャッシュ：頻繁にアクセスされるデータについてはRedisなどのキャッシュ層を導入
-- ページネーション：大量データの取得時はLIMIT/OFFSETによるページネーションを推奨
-- 並列処理：CPUバウンド処理は非同期で実行し、I/Oバウンド処理は非同期で待機
-- 圧縮：レスポンスの圧縮（Gzip/Brotli）を有効化
-- CORS：開発・本番環境に応じたCORS設定を適用
-- OpenAPIセキュリティスキーマ：BearerAuthを統一的に設定し、APIドキュメントの明確性を向上
+## パフォーマンス考慮事項
+- **データベース接続**: 非同期SQLAlchemyを使用し、接続プールを活用
+- **クエリ最適化**: 各テーブルに適切なインデックスを設定
+- **認証**: JWTトークンによる状態なし認証
+- **レート制限**: slowapiを使用したリクエスト制限
+- **CORS**: 開発環境向けの柔軟なオリジン許可
 
 ## トラブルシューティングガイド
-- 401 Unauthorized：JWTトークンの有効期限切れまたは形式不正、パスワード不正
-- 404 Not Found：存在しないTODO IDを指定
-- 400 Bad Request：重複したユーザー名での登録試行
-- 500 Internal Server Error：DB接続エラー、バリデーションエラー
-- 例外処理：backend/app/main.pyで共通エラーレスポンス形式を適用
+
+### 共通エラーレスポンススキーマ
+すべてのエラーは以下の統一スキーマで返されます：
+- status_code: 数値（HTTPステータスコード）
+- detail: 文字列（技術的なエラー詳細）
+- message: 文字列（ユーザーへの表示メッセージ）
+- error_code: 文字列（エラーコード）
+- details: 配列（バリデーションエラー詳細）
+
+### 一般的なエラー状況
+- **400 Bad Request**: 不正なリクエストパラメータ
+- **401 Unauthorized**: 認証失敗または無効なトークン
+- **403 Forbidden**: 権限がない操作
+- **404 Not Found**: 存在しないリソース
+- **422 Unprocessable Entity**: バリデーションエラー
+- **429 Too Many Requests**: レート制限超過
+- **500 Internal Server Error**: サーバー内部エラー
+
+### APIドキュメントの利用方法
+
+#### OpenAPI JSONの取得
+- **URL**: `/api/v1/openapi.json`
+- **用途**: API仕様の機械可読形式
+- **使用例**: Swagger UIやPostmanでのインポート
+
+#### Scalar API Referenceの利用
+- **URL**: `/docs`
+- **特徴**: インタラクティブなAPIドキュメント
+- **認証**: Bearerトークンを使用してエンドポイントをテスト
+- **使い方**:
+  1. Scalarドキュメントページを開く
+  2. 画面右上の「Authorize」ボタンをクリック
+  3. `Bearer <JWTトークン>`を入力
+  4. 各エンドポイントをテスト実行
+
+```mermaid
+sequenceDiagram
+participant Dev as 開発者
+participant Scalar as Scalarドキュメント
+participant API as APIエンドポイント
+participant Auth as 認証
+Dev->>Scalar : /docsページを開く
+Dev->>Scalar : 認証情報を入力
+Scalar->>Auth : Bearerトークンを送信
+Auth-->>Scalar : 認証成功
+Dev->>Scalar : APIエンドポイントを選択
+Scalar->>API : 認証付きリクエスト
+API-->>Scalar : レスポンスを表示
+```
+
+**図の出典**
+- [backend/app/main.py:116-122](file://backend/app/main.py#L116-L122)
 
 **節の出典**
-- [backend/app/main.py](file://backend/app/main.py)
+- [backend/app/middleware/error_handler.py:15-149](file://backend/app/middleware/error_handler.py#L15-L149)
+- [backend/app/main.py:116-122](file://backend/app/main.py#L116-L122)
 
 ## 結論
-本APIリファレンスは、Todoプロジェクトにおける現在実装されているエンドポイント（/、/health、/docs）と既に完成しているエンドポイント（/auth/register、/auth/token、/users/me、/todosなど）について、HTTPメソッド、URLパターン、リクエスト/レスポンススキーマ、認証方法を網羅的にまとめました。JWTトークンの使用方法、エラーレスポンスの形式、ステータスコードの意味についても解説しました。APIセキュリティパラメータのクリーンアップにより、OpenAPIセキュリティスキーマが統一され、APIドキュメント生成の明確性が向上しました。今後の開発では、backend/app/main.py、backend/app/api/、backend/app/schemas/、backend/app/crud/、backend/app/models/、backend/app/core/config.py に定義されたコンポーネントを基に、API仕様の実装・拡張を進めていくことが求められます。
+本APIリファレンスは、Todo管理システムのRESTful APIの完全な仕様を提供しました。認証、TODO管理、ユーザー情報の各エンドポイントについて、HTTPメソッド、URLパターン、スキーマ定義、認証要件、エラーレスポンスを網羅的に記述しました。また、ScalarとOpenAPI JSONの利用方法も説明しました。これらの仕様に従ってクライアントアプリケーションを開発することで、システムとの統合がスムーズに行えるでしょう。
 
 ## 付録
-- 現在の開発状況：docs/current_status.md に記載
-- 起動方法：backend/main.py からuvicornでASGIサーバーを起動
-- OpenAPIドキュメント：/docs でScalarを使用
 
-**節の出典**
-- [docs/current_status.md](file://docs/current_status.md)
-- [backend/main.py](file://backend/main.py)
+### 認証フローの詳細
+```mermaid
+sequenceDiagram
+participant Client as クライアント
+participant Auth as 認証エンドポイント
+participant Security as セキュリティ
+participant UserDB as ユーザーデータベース
+participant Token as トークン
+Client->>Auth : POST /api/v1/auth/register
+Auth->>UserDB : ユーザー登録
+UserDB-->>Auth : 登録完了
+Client->>Auth : POST /api/v1/auth/token
+Auth->>UserDB : ユーザー認証
+UserDB-->>Auth : 認証成功
+Auth->>Security : トークン生成
+Security-->>Auth : JWTトークン
+Auth-->>Client : トークン発行
+Client->>Token : 以降のリクエストで使用
+```
+
+**図の出典**
+- [backend/app/api/api_v1/endpoints/auth.py:17-52](file://backend/app/api/api_v1/endpoints/auth.py#L17-L52)
+- [backend/app/core/security.py:17-27](file://backend/app/core/security.py#L17-L27)
