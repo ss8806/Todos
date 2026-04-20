@@ -16,6 +16,14 @@ This is a full-stack Todo application that provides user authentication and Todo
 - **Error Handling**: Unified error responses and toast notifications
 - **Health Checks**: System health monitoring endpoints
 
+## Screenshots
+
+### Login Page
+![Login Page](public/images/login-screen.png)
+
+### Todo Dashboard
+![Todo Dashboard](public/images/todo-list.png)
+
 ## Tech Stack
 
 ### Frontend
