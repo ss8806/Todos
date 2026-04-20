@@ -6,17 +6,34 @@ from contextlib import asynccontextmanager
 from scalar_fastapi import get_scalar_api_reference
 from sqlmodel import SQLModel, text
 from sqlalchemy.ext.asyncio import AsyncSession
+import logging
 
 from app.api.api_v1.api import api_router
 from app.core.config import settings
 from app.core.db import engine, get_db
+from app.core.logging import setup_logging
+from app.middleware.logging import LoggingMiddleware
+
+# ロギングの初期化
+setup_logging()
+
+logger = logging.getLogger("app")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # アプリケーション起動時の処理
+    logger.info("Application startup", extra={"version": settings.PROJECT_VERSION})
+    
     # 開発用: テーブルを自動生成
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+    
+    logger.info("Database initialized successfully")
+    
     yield
+    
+    # アプリケーションシャットダウン時の処理
+    logger.info("Application shutdown")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -75,6 +92,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ロギングミドルウェアの追加
+app.add_middleware(LoggingMiddleware)
+
 # Scalar API Reference
 @app.get("/docs", include_in_schema=False)
 async def scalar_html():
@@ -91,8 +111,35 @@ async def read_root():
 
 @app.get("/health", tags=["health"], summary="ヘルスチェック", response_description="ヘルスステータス")
 async def health_check(db: AsyncSession = Depends(get_db)):
+    """
+    ヘルスチェックエンドポイント
+    データベース接続を含むシステムの健全性を確認
+    """
+    health_status = {
+        "status": "ok",
+        "version": settings.PROJECT_VERSION,
+        "components": {}
+    }
+    
+    # データベース接続チェック
     try:
         await db.execute(text("SELECT 1"))
-        return {"status": "ok", "database": "connected"}
+        health_status["components"]["database"] = {
+            "status": "ok",
+            "message": "Database connection established"
+        }
     except Exception as e:
-        return {"status": "error", "database": str(e)}
+        health_status["status"] = "error"
+        health_status["components"]["database"] = {
+            "status": "error",
+            "message": str(e)
+        }
+        logger.error("Database health check failed", extra={"error": str(e)})
+    
+    # ヘルスチェック結果をログに記録
+    logger.info(
+        "Health check performed",
+        extra={"overall_status": health_status["status"]}
+    )
+    
+    return health_status
