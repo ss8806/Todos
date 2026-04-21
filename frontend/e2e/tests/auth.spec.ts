@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
+import { createTestUser, loginAndGetToken } from '../fixtures/user-fixture';
 
 test.describe('Authentication Flow', () => {
   let loginPage: LoginPage;
@@ -44,15 +45,21 @@ test.describe('Authentication Flow', () => {
   });
 
   test('should login successfully with valid credentials', async ({ page }) => {
-    // 注意: このテストはバックエンドにテストユーザーが事前に作成されている必要があります
-    // スキップまたは実際の実行環境に応じてユーザーを作成してください
-    test.skip(true, 'テストユーザーの作成が必要');
+    // テストユーザーを作成
+    const testUsername = `testuser_${Date.now()}`;
+    const testPassword = 'testpassword123';
     
-    await loginPage.login('testuser', 'testpassword123');
+    await createTestUser(testUsername, testPassword);
+    
+    // ログイン
+    await loginPage.login(testUsername, testPassword);
     
     // ホームページにリダイレクトされることを確認
-    await page.waitForURL((url) => !url.pathname.includes('/login'), { timeout: 10000 });
+    await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
     await expect(page).toHaveURL('http://localhost:3000/', { timeout: 10000 });
+    
+    // Todoページが表示されていることを確認
+    await expect(page.getByRole('heading', { name: /タスク/ })).toBeVisible();
   });
 });
 

@@ -8,7 +8,7 @@ export default defineConfig({
   testDir: './e2e/tests',
   
   /* 失敗したテストを再実行 */
-  fullyParallel: true,
+  fullyParallel: false,
   
   /* CI上ではフォールトを許可しない */
   forbidOnly: !!process.env.CI,
@@ -16,8 +16,8 @@ export default defineConfig({
   /* 再試行回数 */
   retries: process.env.CI ? 2 : 0,
   
-  /* 並列実行数 */
-  workers: process.env.CI ? 1 : undefined,
+  /* 並列実行数 - レートリミット回避のため1に設定 */
+  workers: 1,
   
   /* レポート設定 */
   reporter: 'html',

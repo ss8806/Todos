@@ -161,3 +161,7 @@ out/
 # IDEs
 .vscode/
 .idea/
+
+# Playwright
+test-results/
+playwright-report/
