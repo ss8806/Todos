@@ -23,6 +23,11 @@ test.describe('Todo CRUD Operations', () => {
     await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
   });
 
+  test.afterEach(async () => {
+    // テスト間に待機時間を追加（レートリミット回避）
+    await new Promise(resolve => setTimeout(resolve, 2000));
+  });
+
   test('should display empty state when no todos', async () => {
     await todoPage.goto();
     
@@ -117,6 +122,11 @@ test.describe('Todo Page Navigation', () => {
     await loginPage.login(testUsername, 'testpassword123');
     await page.waitForTimeout(1000); // レートリミット回避
     await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
+  });
+
+  test.afterEach(async () => {
+    // テスト間に待機時間を追加（レートリミット回避）
+    await new Promise(resolve => setTimeout(resolve, 2000));
   });
 
   test('should logout and redirect to login', async ({ page }) => {
