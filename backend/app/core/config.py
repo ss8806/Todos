@@ -48,8 +48,9 @@ Bearerトークンを使用して認証を行います。
     ]
 
     # Rate Limiting 設定
-    RATE_LIMIT_DEFAULT: str = "100/minute"
-    RATE_LIMIT_LOGIN: str = "5/minute"
+    RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "100/minute")
+    RATE_LIMIT_LOGIN: str = os.getenv("RATE_LIMIT_LOGIN", "5/minute")
+    RATE_LIMIT_REGISTER: str = os.getenv("RATE_LIMIT_REGISTER", "5/minute")
 
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"),

@@ -15,7 +15,7 @@ from app.schemas.token import Token
 router = APIRouter(tags=["auth"])
 
 @router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED, summary="ユーザー登録", response_description="登録されたユーザー情報")
-@limiter.limit(settings.RATE_LIMIT_LOGIN)
+@limiter.limit(settings.RATE_LIMIT_REGISTER)
 async def register(
     request: Request,
     *,

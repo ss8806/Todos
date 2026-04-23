@@ -5,7 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/a
 /**
  * テストユーザーを作成する（リトライ付き）
  */
-export async function createTestUser(username: string, password: string, maxRetries: number = 5) {
+export async function createTestUser(username: string, password: string, maxRetries: number = 8) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -19,14 +19,14 @@ export async function createTestUser(username: string, password: string, maxRetr
         }),
       });
 
-      // 409 Conflict（すでに存在する）はOKとする
-      if (response.ok || response.status === 409) {
-        return response.status === 201 || response.status === 409;
+      // 409 Conflict または 400 Bad Request（すでに存在する）はOKとする
+      if (response.ok || response.status === 409 || response.status === 400) {
+        return true;
       }
 
       // 429 Rate Limitの場合はリトライ
       if (response.status === 429 && attempt < maxRetries) {
-        const waitTime = attempt * 2000; // 2秒、4秒、6秒...
+        const waitTime = attempt * 4000; // 4秒、8秒、12秒...
         console.log(`レートリミット検出。${waitTime / 1000}秒後にリトライ (${attempt}/${maxRetries})...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;

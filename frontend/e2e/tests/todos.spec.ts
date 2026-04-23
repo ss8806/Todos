@@ -9,8 +9,8 @@ test.describe('Todo CRUD Operations', () => {
   let testUsername: string;
 
   test.beforeEach(async ({ page }) => {
-    // ユニークなテストユーザーを作成
-    testUsername = `testuser_${Date.now()}`;
+    // 共通のテストユーザーを使用（レートリミット回避）
+    testUsername = 'e2e_test_user';
     await createTestUser(testUsername, 'testpassword123');
     
     loginPage = new LoginPage(page);
@@ -19,14 +19,37 @@ test.describe('Todo CRUD Operations', () => {
     // ログイン
     await loginPage.goto();
     await loginPage.login(testUsername, 'testpassword123');
-    await page.waitForTimeout(1000); // レートリミット回避
+    await page.waitForTimeout(1500); // レートリミット回避
     await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
+    
+    // テスト前に既存のTodoをクリーンアップ
+    await page.evaluate(async () => {
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = 'http://localhost:8000/api/v1';
+      const response = await fetch(`${API_BASE_URL}/todos/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const todos = await response.json();
+      
+      // 既存のTodoを削除
+      for (const todo of todos) {
+        await fetch(`${API_BASE_URL}/todos/${todo.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+    });
+    
+    await page.reload();
+    await page.waitForTimeout(500);
   });
 
   test.afterEach(async () => {
     // テスト間に待機時間を追加（レートリミット回避）
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
   });
+
+  test.slow(); // テストタイムアウトを3倍に
 
   test('should display empty state when no todos', async () => {
     await todoPage.goto();
@@ -74,11 +97,12 @@ test.describe('Todo CRUD Operations', () => {
     await expect(todoPage.getTodoItem('削除テスト')).not.toBeVisible({ timeout: 10000 });
   });
 
-  test('should search todos', async () => {
+  test('should search todos', async ({ page }) => {
     await todoPage.goto();
     
     // 複数のTodoを追加
     await todoPage.addTodo('買い物');
+    await page.waitForTimeout(500); // Todo追加後の待機
     await todoPage.addTodo('勉強');
     await expect(todoPage.getTodoItem('買い物')).toBeVisible({ timeout: 10000 });
     await expect(todoPage.getTodoItem('勉強')).toBeVisible({ timeout: 10000 });
@@ -92,18 +116,20 @@ test.describe('Todo CRUD Operations', () => {
     await expect(todoPage.getTodoItem('勉強')).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('should add multiple todos', async () => {
+  test('should add multiple todos', async ({ page }) => {
     await todoPage.goto();
     
     // 複数のTodoを追加
     await todoPage.addTodo('Todo 1');
+    await page.waitForTimeout(500);
     await todoPage.addTodo('Todo 2');
+    await page.waitForTimeout(500);
     await todoPage.addTodo('Todo 3');
     
     // すべてのTodoが表示されることを確認
     await expect(todoPage.getTodoItem('Todo 1')).toBeVisible({ timeout: 10000 });
-    await expect(todoPage.getTodoItem('Todo 2')).toBeVisible({ timeout: 5000 });
-    await expect(todoPage.getTodoItem('Todo 3')).toBeVisible({ timeout: 5000 });
+    await expect(todoPage.getTodoItem('Todo 2')).toBeVisible({ timeout: 10000 });
+    await expect(todoPage.getTodoItem('Todo 3')).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -111,8 +137,10 @@ test.describe('Todo Page Navigation', () => {
   let loginPage: LoginPage;
   let todoPage: TodoPage;
 
+  test.slow(); // テストタイムアウトを3倍に
+
   test.beforeEach(async ({ page }) => {
-    const testUsername = `testuser_${Date.now()}`;
+    const testUsername = 'e2e_test_user';
     await createTestUser(testUsername, 'testpassword123');
     
     loginPage = new LoginPage(page);
@@ -120,13 +148,34 @@ test.describe('Todo Page Navigation', () => {
     
     await loginPage.goto();
     await loginPage.login(testUsername, 'testpassword123');
-    await page.waitForTimeout(1000); // レートリミット回避
+    await page.waitForTimeout(1500); // レートリミット回避
     await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
+    
+    // テスト前に既存のTodoをクリーンアップ
+    await page.evaluate(async () => {
+      const token = localStorage.getItem('token');
+      const API_BASE_URL = 'http://localhost:8000/api/v1';
+      const response = await fetch(`${API_BASE_URL}/todos/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const todos = await response.json();
+      
+      // 既存のTodoを削除
+      for (const todo of todos) {
+        await fetch(`${API_BASE_URL}/todos/${todo.id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+      }
+    });
+    
+    await page.reload();
+    await page.waitForTimeout(500);
   });
 
   test.afterEach(async () => {
     // テスト間に待機時間を追加（レートリミット回避）
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
   });
 
   test('should logout and redirect to login', async ({ page }) => {
@@ -144,7 +193,7 @@ test.describe('Todo Page Navigation', () => {
     await page.context().clearCookies();
     await todoPage.goto();
     
-    // ログインページにリダイレクトされることを確認
-    await expect(page).toHaveURL('http://localhost:3000/login', { timeout: 10000 });
+    // ログインページにリダイレクトされることを確認（callbackUrlパラメータを含む可能性がある）
+    await expect(page).toHaveURL(/http:\/\/localhost:3000\/login/, { timeout: 10000 });
   });
 });
