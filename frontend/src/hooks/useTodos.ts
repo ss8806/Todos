@@ -73,6 +73,21 @@ export function useTodos(filters?: TodoFilters) {
     },
   });
 
+  const updateTodoMutation = useMutation({
+    mutationFn: ({ id, ...data }: { id: string; title?: string; is_completed?: boolean; priority?: "high" | "medium" | "low"; due_date?: string; tags?: string }) =>
+      apiFetch(`/todos/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      toast.success("TODO更新", { description: "TODOを更新しました" });
+    },
+    onError: (error: Error) => {
+      toast.error("TODO更新失敗", { description: error.message });
+    },
+  });
+
   const deleteTodoMutation = useMutation({
     mutationFn: (id: string) =>
       apiFetch(`/todos/${id}`, {
@@ -91,6 +106,7 @@ export function useTodos(filters?: TodoFilters) {
     todosQuery,
     addTodoMutation,
     toggleTodoMutation,
+    updateTodoMutation,
     deleteTodoMutation,
   };
 }

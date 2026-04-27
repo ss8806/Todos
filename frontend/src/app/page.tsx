@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { TodoFilterPanel } from "./_components/TodoFilterPanel";
 import { TodoItemList } from "./_components/TodoItemList";
+import { TodoEditDialog } from "./_components/TodoEditDialog";
+import { Todo } from "@/hooks/useTodos";
 
 export default function Home() {
   const [newTodo, setNewTodo] = useState("");
@@ -20,8 +22,10 @@ export default function Home() {
     sort_order: "desc",
   });
   const [showFilters, setShowFilters] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const router = useRouter();
-  const { todosQuery, addTodoMutation, toggleTodoMutation, deleteTodoMutation } = useTodos(filters);
+  const { todosQuery, addTodoMutation, toggleTodoMutation, updateTodoMutation, deleteTodoMutation } = useTodos(filters);
 
   const { data: todos, isLoading, isError } = todosQuery;
 
@@ -93,6 +97,19 @@ export default function Home() {
     });
   };
 
+  const handleEdit = (todo: Todo) => {
+    setEditingTodo(todo);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = (data: { title?: string; is_completed?: boolean; priority?: "high" | "medium" | "low"; due_date?: string; tags?: string }) => {
+    if (!editingTodo) return;
+    updateTodoMutation.mutate(
+      { id: editingTodo.id, ...data },
+      { onSuccess: () => setEditDialogOpen(false) }
+    );
+  };
+
   // ローディング中はローディング表示
   if (isLoading) {
     return (
@@ -162,6 +179,15 @@ export default function Home() {
           isLoading={isLoading}
           onToggle={handleToggle}
           onDelete={handleDelete}
+          onEdit={handleEdit}
+        />
+
+        <TodoEditDialog
+          todo={editingTodo}
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          onSave={handleSaveEdit}
+          isPending={updateTodoMutation.isPending}
         />
       </div>
     </div>

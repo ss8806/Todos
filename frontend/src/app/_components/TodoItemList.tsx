@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, CheckCircle, Circle, Loader2, FileText } from "lucide-react";
+import { Trash2, CheckCircle, Circle, Loader2, FileText, Pencil } from "lucide-react";
 import { Todo } from "@/hooks/useTodos";
 
 interface TodoItemListProps {
@@ -12,9 +12,10 @@ interface TodoItemListProps {
   isLoading: boolean;
   onToggle: (id: string, is_completed: boolean) => void;
   onDelete: (id: string) => void;
+  onEdit: (todo: Todo) => void;
 }
 
-export function TodoItemList({ todos, isLoading, onToggle, onDelete }: TodoItemListProps) {
+export function TodoItemList({ todos, isLoading, onToggle, onDelete, onEdit }: TodoItemListProps) {
   const completedCount = todos?.filter((t) => t.is_completed).length ?? 0;
   const pendingCount = (todos?.length ?? 0) - completedCount;
 
@@ -100,16 +101,24 @@ export function TodoItemList({ todos, isLoading, onToggle, onDelete }: TodoItemL
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() =>
-                    onDelete(todo.id)
-                  }
-                  className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onEdit(todo)}
+                    className="text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onDelete(todo.id)}
+                    className="text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
