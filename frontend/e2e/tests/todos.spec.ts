@@ -95,7 +95,7 @@ test.describe('Todo CRUD Operations', () => {
     await expect(todoPage.getTodoItem('削除テスト')).not.toBeVisible({ timeout: 10000 });
   });
 
-  test('should search todos', async ({ page }) => {
+  test('should search todos', async () => {
     await todoPage.goto();
     
     // 複数のTodoを追加
@@ -113,7 +113,7 @@ test.describe('Todo CRUD Operations', () => {
     await expect(todoPage.getTodoItem('勉強')).not.toBeVisible({ timeout: 5000 });
   });
 
-  test('should add multiple todos', async ({ page }) => {
+  test('should add multiple todos', async () => {
     await todoPage.goto();
     
     // 複数のTodoを追加（表示確認で自然に待機）

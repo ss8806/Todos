@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LogIn, Loader2 } from "lucide-react";
-import { toast } from "sonner";
 
 const loginSchema = z.object({
   username: z.string().min(3, "ユーザー名は3文字以上で入力してください"),

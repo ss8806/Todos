@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { LoginPage } from '../pages/login.page';
-import { createTestUser, loginAndGetToken } from '../fixtures/user-fixture';
+import { createTestUser } from '../fixtures/user-fixture';
 
 test.describe('Authentication Flow', () => {
   let loginPage: LoginPage;

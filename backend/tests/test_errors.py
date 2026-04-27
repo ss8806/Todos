@@ -1,24 +1,5 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
-from app.main import app
-from app.core.db import engine
-from sqlmodel import SQLModel
 
-@pytest.fixture
-async def setup_db():
-    """テスト用のデータベースセットアップ"""
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    yield
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-@pytest.fixture
-async def client():
-    """テスト用クライアント"""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as c:
-        yield c
 
 @pytest.mark.asyncio
 async def test_health_check(client, setup_db):

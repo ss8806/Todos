@@ -11,7 +11,8 @@ export function ThemeToggle() {
 
   // ハイドレーションミスマッチを避けるため、マウント後にレンダリング
   useEffect(() => {
-    setMounted(true);
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
   if (!mounted) {
