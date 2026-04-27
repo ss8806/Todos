@@ -31,3 +31,10 @@ class TodoRead(TodoBase):
     id: uuid.UUID
     user_id: uuid.UUID
     created_at: datetime
+    updated_at: datetime
+
+class TodoCountResponse(SQLModel):
+    total: int
+
+class TodoDeleteResponse(SQLModel):
+    status: str

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { logout } from "@/lib/api";
+import { logout, ApiError } from "@/lib/api";
 import { useTodos, TodoFilters } from "@/hooks/useTodos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,12 +46,12 @@ export default function Home() {
   const currentPage = Math.floor((filters.skip ?? 0) / (filters.limit ?? 10)) + 1;
   const pageSize = filters.limit ?? 10;
 
-  // エラー時にリダイレクト（useEffect内で呼び出す）
+  // 認証エラー（401）時のみログインページにリダイレクト
   useEffect(() => {
-    if (isError) {
+    if (isError && todosQuery.error instanceof ApiError && todosQuery.error.status === 401) {
       router.push("/login");
     }
-  }, [isError, router]);
+  }, [isError, todosQuery.error, router]);
 
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();

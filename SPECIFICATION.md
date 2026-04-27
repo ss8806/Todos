@@ -36,10 +36,12 @@ Todoリストアプリの仕様書です。
 - JWTによるセッション管理
 
 ### 3.2 Todoリスト機能
-- Todoの表示（一覧取得）
-- Todoの追加
-- Todoの編集（タイトル、完了状態の更新）
+- Todoの表示（一覧取得・ページネーション対応）
+- Todoの追加（タイトル・優先度・期限・タグを設定可能）
+- Todoの編集（タイトル・完了状態・優先度・期限・タグの更新）
 - Todoの削除
+- 検索・フィルタリング（キーワード検索、完了状態、優先度、タグ）
+- ソート（作成日・優先度・期限）
 
 ---
 
@@ -63,6 +65,7 @@ Todoリストアプリの仕様書です。
 | due_date | TIMESTAMP | Nullable | 期限日時 |
 | tags | VARCHAR(500) | Nullable | タグ（カンマ区切り） |
 | created_at | TIMESTAMP | Default: now() | 作成日時 |
+| updated_at | TIMESTAMP | Default: now() | 更新日時 |
 
 ---
 
@@ -88,6 +91,7 @@ Todoリストアプリの仕様書です。
     - `limit`: 取得件数上限（デフォルト100、最大100）
 - `POST /todos`: 新規Todo作成
 - `PUT /todos/{id}`: Todo更新（タイトル・完了状態・優先度・期限・タグ）
+- `GET /todos/count`: Todo件数取得（フィルタ条件を引き継ぐ）
 - `DELETE /todos/{id}`: Todo削除
 
 ---
