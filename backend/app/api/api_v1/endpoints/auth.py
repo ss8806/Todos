@@ -26,7 +26,7 @@ async def register(
     if user:
         raise HTTPException(
             status_code=400,
-            detail="The user with this username already exists in the system.",
+            detail="このユーザー名は既に使用されています",
         )
     user = await crud_user.create_user(db, user=user_in)
     return user

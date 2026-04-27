@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select, col
 from app.models.todo import Todo
@@ -104,6 +104,8 @@ async def update_todo(
             db_todo.due_date = due_date
         if tags is not None:
             db_todo.tags = tags
+
+        db_todo.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
         db.add(db_todo)
         await db.commit()
