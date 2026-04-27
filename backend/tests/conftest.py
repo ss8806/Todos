@@ -12,8 +12,9 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy import create_engine, text
 from app.main import app
-from app.core.db import engine
+from app.core.db import engine, async_session
 from app.core.config import settings
+from app.core.security import create_access_token
 from sqlmodel import SQLModel
 
 
@@ -52,3 +53,28 @@ async def client():
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
+
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def db_session(setup_db):
+    """テスト用の非同期DBセッション"""
+    async with async_session() as session:
+        yield session
+
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def test_user(db_session):
+    """Factoryで作成したテストユーザー（DB直書き）"""
+    from app.crud import crud_user
+    from tests.factories import UserCreateFactory
+
+    user_data = UserCreateFactory.build()
+    user = await crud_user.create_user(db_session, user_data)
+    return user
+
+
+@pytest_asyncio.fixture(loop_scope="function")
+async def auth_token(test_user):
+    """Factory作成ユーザーのJWTトークン（API経由のログインを回避）"""
+    access_token = create_access_token(data={"sub": test_user.email})
+    return access_token
