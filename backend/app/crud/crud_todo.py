@@ -2,6 +2,7 @@ import uuid
 from typing import Optional
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func
 from sqlmodel import select, col
 from app.models.todo import Todo
 from app.schemas.todo import TodoCreate, PriorityEnum
@@ -68,6 +69,33 @@ async def get_todos(
     
     result = await db.execute(statement)
     return result.scalars().all()
+
+async def count_todos(
+    db: AsyncSession,
+    user_id: uuid.UUID,
+    search: Optional[str] = None,
+    is_completed: Optional[bool] = None,
+    priority: Optional[PriorityEnum] = None,
+    tags: Optional[str] = None,
+) -> int:
+    """
+    TODO件数取得（検索・フィルタリング対応）
+    """
+    statement = select(func.count()).select_from(Todo).where(Todo.user_id == user_id)
+
+    if search:
+        statement = statement.where(Todo.title.contains(search))
+    if is_completed is not None:
+        statement = statement.where(Todo.is_completed == is_completed)
+    if priority:
+        statement = statement.where(Todo.priority == priority)
+    if tags:
+        tag_list = [tag.strip() for tag in tags.split(",")]
+        for tag in tag_list:
+            statement = statement.where(Todo.tags.contains(tag))
+
+    result = await db.execute(statement)
+    return result.scalar_one()
 
 async def create_todo(db: AsyncSession, todo: TodoCreate, user_id: uuid.UUID):
     db_todo = Todo.model_validate(todo, update={"user_id": user_id})

@@ -4,7 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Trash2, CheckCircle, Circle, Loader2, FileText, Pencil } from "lucide-react";
+import { Trash2, CheckCircle, Circle, Loader2, FileText, Pencil, AlertTriangle, Clock } from "lucide-react";
 import { Todo } from "@/hooks/useTodos";
 
 interface TodoItemListProps {
@@ -13,9 +13,25 @@ interface TodoItemListProps {
   onToggle: (id: string, is_completed: boolean) => void;
   onDelete: (id: string) => void;
   onEdit: (todo: Todo) => void;
+  onTagClick?: (tag: string) => void;
 }
 
-export function TodoItemList({ todos, isLoading, onToggle, onDelete, onEdit }: TodoItemListProps) {
+function getDueStatus(dueDate: string): { status: "overdue" | "soon" | "ok"; label: string } {
+  const now = new Date();
+  const due = new Date(dueDate);
+  const diffMs = due.getTime() - now.getTime();
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  if (diffHours < 0) {
+    return { status: "overdue", label: "期限切れ" };
+  }
+  if (diffHours <= 24) {
+    return { status: "soon", label: "まもなく期限" };
+  }
+  return { status: "ok", label: `期限: ${due.toLocaleDateString("ja-JP")}` };
+}
+
+export function TodoItemList({ todos, isLoading, onToggle, onDelete, onEdit, onTagClick }: TodoItemListProps) {
   const completedCount = todos?.filter((t) => t.is_completed).length ?? 0;
   const pendingCount = (todos?.length ?? 0) - completedCount;
 
@@ -89,15 +105,51 @@ export function TodoItemList({ todos, isLoading, onToggle, onDelete, onEdit }: T
                         {todo.priority === "high" ? "高" : todo.priority === "medium" ? "中" : "低"}
                       </Badge>
                     )}
-                    {todo.due_date && (
-                      <span className="text-xs text-zinc-500">
-                        期限: {new Date(todo.due_date).toLocaleDateString("ja-JP")}
-                      </span>
+                    {todo.due_date && !todo.is_completed && (
+                      (() => {
+                        const due = getDueStatus(todo.due_date);
+                        if (due.status === "overdue") {
+                          return (
+                            <Badge variant="destructive" className="text-xs">
+                              <AlertTriangle className="w-3 h-3 mr-1" />
+                              {due.label}
+                            </Badge>
+                          );
+                        }
+                        if (due.status === "soon") {
+                          return (
+                            <Badge variant="default" className="text-xs bg-amber-500 hover:bg-amber-600">
+                              <Clock className="w-3 h-3 mr-1" />
+                              {due.label}
+                            </Badge>
+                          );
+                        }
+                        return (
+                          <span className="text-xs text-zinc-500">
+                            {due.label}
+                          </span>
+                        );
+                      })()
                     )}
                     {todo.tags && (
-                      <span className="text-xs text-zinc-500">
-                        タグ: {todo.tags}
-                      </span>
+                      <div className="flex gap-1 flex-wrap">
+                        {todo.tags.split(",").map((tag) => {
+                          const trimmed = tag.trim();
+                          if (!trimmed) return null;
+                          return (
+                            <button
+                              key={trimmed}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onTagClick?.(trimmed);
+                              }}
+                              className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                            >
+                              {trimmed}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 </div>

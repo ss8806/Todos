@@ -10,6 +10,25 @@ from app.schemas.todo import TodoCreate, TodoRead, TodoUpdate, PriorityEnum
 
 router = APIRouter(tags=["todos"])
 
+@router.get("/count", summary="TODO件数取得", response_description="TODO件数")
+async def read_todos_count(
+    db: AsyncSession = Depends(deps.get_db),
+    current_user: User = Depends(deps.get_current_user),
+    search: Optional[str] = Query(default=None, description="検索キーワード"),
+    is_completed: Optional[bool] = Query(default=None, description="完了状態でのフィルタ"),
+    priority: Optional[PriorityEnum] = Query(default=None, description="優先度でのフィルタ"),
+    tags: Optional[str] = Query(default=None, description="タグでのフィルタ（カンマ区切り）"),
+) -> dict:
+    total = await crud_todo.count_todos(
+        db,
+        user_id=current_user.id,
+        search=search,
+        is_completed=is_completed,
+        priority=priority,
+        tags=tags,
+    )
+    return {"total": total}
+
 @router.get("/", response_model=List[TodoRead], summary="TODO一覧取得", response_description="TODOリスト")
 async def read_todos(
     db: AsyncSession = Depends(deps.get_db),

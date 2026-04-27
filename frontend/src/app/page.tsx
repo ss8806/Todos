@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { TodoFilterPanel } from "./_components/TodoFilterPanel";
 import { TodoItemList } from "./_components/TodoItemList";
 import { TodoEditDialog } from "./_components/TodoEditDialog";
+import { Pagination } from "./_components/Pagination";
 import { Todo } from "@/hooks/useTodos";
 
 export default function Home() {
@@ -32,14 +33,18 @@ export default function Home() {
   const [filters, setFilters] = useState<TodoFilters>({
     sort_by: "created_at",
     sort_order: "desc",
+    limit: 10,
   });
   const [showFilters, setShowFilters] = useState(false);
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const router = useRouter();
-  const { todosQuery, addTodoMutation, toggleTodoMutation, updateTodoMutation, deleteTodoMutation } = useTodos(filters);
+  const { todosQuery, countQuery, addTodoMutation, toggleTodoMutation, updateTodoMutation, deleteTodoMutation } = useTodos(filters);
 
   const { data: todos, isLoading, isError } = todosQuery;
+  const totalItems = countQuery.data?.total ?? 0;
+  const currentPage = Math.floor((filters.skip ?? 0) / (filters.limit ?? 10)) + 1;
+  const pageSize = filters.limit ?? 10;
 
   // エラー時にリダイレクト（useEffect内で呼び出す）
   useEffect(() => {
@@ -80,13 +85,14 @@ export default function Home() {
   };
 
   const handleSearch = (value: string) => {
-    setFilters((prev) => ({ ...prev, search: value || undefined }));
+    setFilters((prev) => ({ ...prev, search: value || undefined, skip: 0 }));
   };
 
   const handleStatusFilter = (value: string | null) => {
     setFilters((prev) => ({
       ...prev,
       is_completed: value === "all" || value === null ? undefined : value === "completed",
+      skip: 0,
     }));
   };
 
@@ -94,6 +100,7 @@ export default function Home() {
     setFilters((prev) => ({
       ...prev,
       priority: value === "all" || value === null ? undefined : (value as "high" | "medium" | "low"),
+      skip: 0,
     }));
   };
 
@@ -104,7 +111,17 @@ export default function Home() {
       ...prev,
       sort_by: sort_by as TodoFilters["sort_by"],
       sort_order: sort_order as TodoFilters["sort_order"],
+      skip: 0,
     }));
+  };
+
+  const handleTagClick = (tag: string) => {
+    setFilters((prev) => ({ ...prev, tags: tag, skip: 0 }));
+    setShowFilters(true);
+  };
+
+  const handlePageChange = (page: number) => {
+    setFilters((prev) => ({ ...prev, skip: (page - 1) * (prev.limit ?? 10) }));
   };
 
   const handleToggle = (id: string, is_completed: boolean) => {
@@ -257,6 +274,14 @@ export default function Home() {
           onToggle={handleToggle}
           onDelete={handleDelete}
           onEdit={handleEdit}
+          onTagClick={handleTagClick}
+        />
+
+        <Pagination
+          currentPage={currentPage}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={handlePageChange}
         />
 
         <TodoEditDialog

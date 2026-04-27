@@ -44,6 +44,11 @@ export function useTodos(filters?: TodoFilters) {
     queryFn: () => apiFetch(`/todos/${queryString ? `?${queryString}` : ""}`),
   });
 
+  const countQuery = useQuery<{ total: number }>({
+    queryKey: ["todos", "count", queryEntries],
+    queryFn: () => apiFetch(`/todos/count/${queryString ? `?${queryString}` : ""}`),
+  });
+
   const addTodoMutation = useMutation({
     mutationFn: (data: { title: string; priority?: "high" | "medium" | "low"; due_date?: string; tags?: string }) =>
       apiFetch("/todos/", {
@@ -104,6 +109,7 @@ export function useTodos(filters?: TodoFilters) {
 
   return {
     todosQuery,
+    countQuery,
     addTodoMutation,
     toggleTodoMutation,
     updateTodoMutation,
