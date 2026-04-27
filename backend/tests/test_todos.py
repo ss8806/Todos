@@ -7,13 +7,13 @@ async def auth_token(client, setup_db):
     # ユーザー登録
     await client.post(
         "/api/v1/auth/register",
-        json={"username": "todouser", "password": "password123"}
+        json={"email": "todouser@example.com", "password": "password123"}
     )
-    
+
     # ログインしてトークン取得
     response = await client.post(
         "/api/v1/auth/token",
-        data={"username": "todouser", "password": "password123"},
+        data={"username": "todouser@example.com", "password": "password123"},
         headers={"Content-Type": "application/x-www-form-urlencoded"}
     )
     return response.json()["access_token"]

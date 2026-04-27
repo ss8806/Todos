@@ -20,11 +20,11 @@ async def get_current_user(
             detail="認証情報を検証できませんでした",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    username: str = payload.get("sub")
-    if username is None:
+    email: str = payload.get("sub")
+    if email is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="トークンが無効です")
     
-    user = await crud_user.get_user_by_username(db, username=username)
+    user = await crud_user.get_user_by_email(db, email=email)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーが見つかりません")
     return user

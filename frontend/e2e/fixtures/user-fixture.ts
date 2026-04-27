@@ -3,7 +3,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/a
 /**
  * テストユーザーを作成する（リトライ付き）
  */
-export async function createTestUser(username: string, password: string, maxRetries: number = 8) {
+export async function createTestUser(email: string, password: string, maxRetries: number = 8) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
@@ -12,7 +12,7 @@ export async function createTestUser(username: string, password: string, maxRetr
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username,
+          email,
           password,
         }),
       });
@@ -48,9 +48,9 @@ export async function createTestUser(username: string, password: string, maxRetr
 /**
  * テストユーザーでログインし、トークンを取得する
  */
-export async function loginAndGetToken(username: string, password: string) {
+export async function loginAndGetToken(email: string, password: string) {
   const formData = new URLSearchParams();
-  formData.append('username', username);
+  formData.append('username', email);
   formData.append('password', password);
 
   const response = await fetch(`${API_BASE_URL}/auth/token`, {
@@ -72,8 +72,8 @@ export async function loginAndGetToken(username: string, password: string) {
 /**
  * テストユーザーを削除する（クリーンアップ用）
  */
-export async function deleteTestUser(username: string, token: string) {
-  const response = await fetch(`${API_BASE_URL}/users/${username}`, {
+export async function deleteTestUser(email: string, token: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${email}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,

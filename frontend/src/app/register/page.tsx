@@ -14,7 +14,7 @@ import { UserPlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const registerSchema = z.object({
-  username: z.string().min(3, "ユーザー名は3文字以上で入力してください"),
+  email: z.string().email("有効なメールアドレスを入力してください"),
   password: z.string().min(6, "パスワードは6文字以上で入力してください"),
 });
 
@@ -59,15 +59,16 @@ export default function RegisterPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">ユーザー名</Label>
+              <Label htmlFor="email">メールアドレス</Label>
               <Input
-                id="username"
-                placeholder="ユーザー名を決めてください"
-                {...register("username")}
-                className={errors.username ? "border-red-500" : ""}
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                {...register("email")}
+                className={errors.email ? "border-red-500" : ""}
               />
-              {errors.username && (
-                <p className="text-sm text-red-500">{errors.username.message}</p>
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
             </div>
             <div className="space-y-2">

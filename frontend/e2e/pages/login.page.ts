@@ -15,7 +15,7 @@ export class LoginPage {
 
   constructor(page: Page) {
     this.page = page;
-    this.emailInput = page.getByLabel('ユーザー名');
+    this.emailInput = page.getByLabel('メールアドレス');
     this.passwordInput = page.getByLabel('パスワード');
     this.submitButton = page.getByRole('button', { name: /ログイン/ });
     this.registerLink = page.getByRole('link', { name: /アカウントを作成/ });

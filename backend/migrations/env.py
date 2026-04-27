@@ -11,6 +11,7 @@ from app.core.config import settings
 # This must be done BEFORE accessing SQLModel.metadata
 from app.models.user import User  # noqa: F401
 from app.models.todo import Todo  # noqa: F401
+from app.models.password_reset import PasswordResetToken  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

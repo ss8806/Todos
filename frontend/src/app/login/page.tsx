@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { LogIn, Loader2 } from "lucide-react";
 
 const loginSchema = z.object({
-  username: z.string().min(3, "ユーザー名は3文字以上で入力してください"),
+  email: z.string().email("有効なメールアドレスを入力してください"),
   password: z.string().min(6, "パスワードは6文字以上で入力してください"),
 });
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await login(data.username, data.password);
+      await login(data.email, data.password);
       router.push("/");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "ログインに失敗しました";
@@ -53,19 +53,25 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">ユーザー名</Label>
+              <Label htmlFor="email">メールアドレス</Label>
               <Input
-                id="username"
-                placeholder="ユーザー名を入力"
-                {...register("username")}
-                className={errors.username ? "border-red-500" : ""}
+                id="email"
+                type="email"
+                placeholder="your@email.com"
+                {...register("email")}
+                className={errors.email ? "border-red-500" : ""}
               />
-              {errors.username && (
-                <p className="text-sm text-red-500">{errors.username.message}</p>
+              {errors.email && (
+                <p className="text-sm text-red-500">{errors.email.message}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">パスワード</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">パスワード</Label>
+                <Link href="/forgot-password" className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 underline">
+                  パスワードを忘れた方
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"

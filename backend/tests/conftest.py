@@ -4,6 +4,8 @@ import os
 os.environ["RATE_LIMIT_DEFAULT"] = "10000/minute"
 os.environ["RATE_LIMIT_LOGIN"] = "10000/minute"
 os.environ["RATE_LIMIT_REGISTER"] = "10000/minute"
+os.environ["RATE_LIMIT_FORGOT_PASSWORD"] = "10000/minute"
+os.environ["RATE_LIMIT_RESET_PASSWORD"] = "10000/minute"
 
 import asyncio
 import pytest_asyncio
