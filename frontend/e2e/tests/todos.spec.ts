@@ -19,9 +19,8 @@ test.describe('Todo CRUD Operations', () => {
     // ログイン
     await loginPage.goto();
     await loginPage.login(testUsername, 'testpassword123');
-    await page.waitForTimeout(1500); // レートリミット回避
     await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
-    
+
     // テスト前に既存のTodoをクリーンアップ
     await page.evaluate(async () => {
       const token = localStorage.getItem('token');
@@ -30,7 +29,7 @@ test.describe('Todo CRUD Operations', () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const todos = await response.json();
-      
+
       // 既存のTodoを削除
       for (const todo of todos) {
         await fetch(`${API_BASE_URL}/todos/${todo.id}`, {
@@ -39,14 +38,13 @@ test.describe('Todo CRUD Operations', () => {
         });
       }
     });
-    
+
     await page.reload();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async () => {
-    // テスト間に待機時間を追加（レートリミット回避）
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // クリーンアップが必要な場合はここに記述
   });
 
   test.slow(); // テストタイムアウトを3倍に
@@ -102,9 +100,8 @@ test.describe('Todo CRUD Operations', () => {
     
     // 複数のTodoを追加
     await todoPage.addTodo('買い物');
-    await page.waitForTimeout(500); // Todo追加後の待機
-    await todoPage.addTodo('勉強');
     await expect(todoPage.getTodoItem('買い物')).toBeVisible({ timeout: 10000 });
+    await todoPage.addTodo('勉強');
     await expect(todoPage.getTodoItem('勉強')).toBeVisible({ timeout: 10000 });
     
     // 検索を実行
@@ -119,16 +116,12 @@ test.describe('Todo CRUD Operations', () => {
   test('should add multiple todos', async ({ page }) => {
     await todoPage.goto();
     
-    // 複数のTodoを追加
+    // 複数のTodoを追加（表示確認で自然に待機）
     await todoPage.addTodo('Todo 1');
-    await page.waitForTimeout(500);
-    await todoPage.addTodo('Todo 2');
-    await page.waitForTimeout(500);
-    await todoPage.addTodo('Todo 3');
-    
-    // すべてのTodoが表示されることを確認
     await expect(todoPage.getTodoItem('Todo 1')).toBeVisible({ timeout: 10000 });
+    await todoPage.addTodo('Todo 2');
     await expect(todoPage.getTodoItem('Todo 2')).toBeVisible({ timeout: 10000 });
+    await todoPage.addTodo('Todo 3');
     await expect(todoPage.getTodoItem('Todo 3')).toBeVisible({ timeout: 10000 });
   });
 });
@@ -170,12 +163,11 @@ test.describe('Todo Page Navigation', () => {
     });
     
     await page.reload();
-    await page.waitForTimeout(500);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async () => {
-    // テスト間に待機時間を追加（レートリミット回避）
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // クリーンアップが必要な場合はここに記述
   });
 
   test('should logout and redirect to login', async ({ page }) => {

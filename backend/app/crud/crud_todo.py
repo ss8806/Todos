@@ -77,9 +77,10 @@ async def create_todo(db: AsyncSession, todo: TodoCreate, user_id: uuid.UUID):
     return db_todo
 
 async def update_todo(
-    db: AsyncSession, 
-    todo_id: uuid.UUID, 
+    db: AsyncSession,
+    todo_id: uuid.UUID,
     user_id: uuid.UUID,
+    title: Optional[str] = None,
     is_completed: Optional[bool] = None,
     priority: Optional[PriorityEnum] = None,
     due_date: Optional[datetime] = None,
@@ -93,6 +94,8 @@ async def update_todo(
     db_todo = result.scalar_one_or_none()
     
     if db_todo:
+        if title is not None:
+            db_todo.title = title
         if is_completed is not None:
             db_todo.is_completed = is_completed
         if priority is not None:
@@ -101,11 +104,11 @@ async def update_todo(
             db_todo.due_date = due_date
         if tags is not None:
             db_todo.tags = tags
-        
+
         db.add(db_todo)
         await db.commit()
         await db.refresh(db_todo)
-    
+
     return db_todo
 
 async def delete_todo(db: AsyncSession, todo_id: uuid.UUID, user_id: uuid.UUID):

@@ -56,9 +56,10 @@ async def update_todo(
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     todo = await crud_todo.update_todo(
-        db, 
-        todo_id=id, 
+        db,
+        todo_id=id,
         user_id=current_user.id,
+        title=todo_in.title,
         is_completed=todo_in.is_completed,
         priority=todo_in.priority,
         due_date=todo_in.due_date,
@@ -76,4 +77,6 @@ async def delete_todo(
     current_user: User = Depends(deps.get_current_user),
 ) -> Any:
     todo = await crud_todo.delete_todo(db, todo_id=id, user_id=current_user.id)
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
     return {"status": "success"}

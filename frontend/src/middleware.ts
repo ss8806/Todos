@@ -28,11 +28,7 @@ export function middleware(request: NextRequest) {
 // ミドルウェアを実行するパスを指定
 export const config = {
   matcher: [
-    /*
-     * 以下のパスでミドルウェアを実行：
-     * - / (ホームページ)
-     * - /api/:path* (APIルート)
-     */
-    '/',
+    // 認証が必要なページ全般（ログイン・登録・Next.js内部パス・静的ファイルは除外）
+    '/((?!login|register|_next|api|favicon.ico|.*\\.).*)',
   ],
 };

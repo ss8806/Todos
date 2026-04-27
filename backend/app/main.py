@@ -102,6 +102,10 @@ def custom_openapi():
 app.openapi = custom_openapi
 
 # CORS ミドルウェアの設定
+# 本番環境では必ず BACKEND_CORS_ORIGINS を環境変数で厳密に設定すること
+if settings.is_production and not settings.BACKEND_CORS_ORIGINS:
+    raise RuntimeError("BACKEND_CORS_ORIGINS must be set in production environment")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],

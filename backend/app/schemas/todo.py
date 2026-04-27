@@ -21,6 +21,7 @@ class TodoCreate(TodoBase):
     pass
 
 class TodoUpdate(SQLModel):
+    title: Optional[str] = Field(default=None, max_length=255)
     is_completed: Optional[bool] = None
     priority: Optional[PriorityEnum] = None
     due_date: Optional[datetime] = None

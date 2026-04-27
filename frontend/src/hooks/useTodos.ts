@@ -26,20 +26,21 @@ export interface TodoFilters {
 export function useTodos(filters?: TodoFilters) {
   const queryClient = useQueryClient();
 
-  const queryParams = new URLSearchParams();
-  if (filters?.search) queryParams.set("search", filters.search);
-  if (filters?.is_completed !== undefined) queryParams.set("is_completed", String(filters.is_completed));
-  if (filters?.priority) queryParams.set("priority", filters.priority);
-  if (filters?.tags) queryParams.set("tags", filters.tags);
-  if (filters?.sort_by) queryParams.set("sort_by", filters.sort_by);
-  if (filters?.sort_order) queryParams.set("sort_order", filters.sort_order);
-  if (filters?.skip !== undefined) queryParams.set("skip", String(filters.skip));
-  if (filters?.limit !== undefined) queryParams.set("limit", String(filters.limit));
+  // クエリパラメータを決定論的な順序で構築
+  const queryEntries: [string, string][] = [];
+  if (filters?.search) queryEntries.push(["search", filters.search]);
+  if (filters?.is_completed !== undefined) queryEntries.push(["is_completed", String(filters.is_completed)]);
+  if (filters?.priority) queryEntries.push(["priority", filters.priority]);
+  if (filters?.tags) queryEntries.push(["tags", filters.tags]);
+  if (filters?.sort_by) queryEntries.push(["sort_by", filters.sort_by]);
+  if (filters?.sort_order) queryEntries.push(["sort_order", filters.sort_order]);
+  if (filters?.skip !== undefined) queryEntries.push(["skip", String(filters.skip)]);
+  if (filters?.limit !== undefined) queryEntries.push(["limit", String(filters.limit)]);
 
-  const queryString = queryParams.toString();
+  const queryString = new URLSearchParams(queryEntries).toString();
 
   const todosQuery = useQuery<Todo[]>({
-    queryKey: ["todos", queryString],
+    queryKey: ["todos", queryEntries],
     queryFn: () => apiFetch(`/todos/${queryString ? `?${queryString}` : ""}`),
   });
 

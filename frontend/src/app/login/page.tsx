@@ -34,8 +34,6 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.username, data.password);
-      // トークンが確実に保存されるように少し待機
-      await new Promise(resolve => setTimeout(resolve, 100));
       router.push("/");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "ログインに失敗しました";

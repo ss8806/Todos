@@ -31,13 +31,11 @@ jobs:
 
       - name: Run ruff (lint check)
         working-directory: ./backend
-        run: uv run ruff check . || true
-        continue-on-error: true
+        run: uv run ruff check .
 
       - name: Run ruff (format check)
         working-directory: ./backend
-        run: uv run ruff format --check . || true
-        continue-on-error: true
+        run: uv run ruff format --check .
 
   backend-test:
     name: Backend Test
@@ -81,8 +79,7 @@ jobs:
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/tododb
           SECRET_KEY: test-secret-key-for-ci
-        run: uv run pytest -v --cov=app --cov-report=xml || echo "No tests found or tests failed"
-        continue-on-error: true
+        run: uv run pytest -v --cov=app --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -111,13 +108,11 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./frontend
-        run: bun run lint || true
-        continue-on-error: true
+        run: bun run lint
 
       - name: Type check
         working-directory: ./frontend
-        run: bunx tsc --noEmit || true
-        continue-on-error: true
+        run: bunx tsc --noEmit
 
   frontend-test:
     name: Frontend Test
@@ -138,8 +133,7 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: ./frontend
-        run: bun run test:coverage || true
-        continue-on-error: true
+        run: bun run test:coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
@@ -170,8 +164,7 @@ jobs:
         working-directory: ./frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
-        run: bun run build || echo "Build failed"
-        continue-on-error: true
+        run: bun run build
 
   docker-build:
     name: Docker Build Test
@@ -194,7 +187,6 @@ jobs:
           push: false
           load: true
           tags: todo-backend:latest
-        continue-on-error: true
 
       - name: Build Frontend Docker image
         if: hashFiles('docker/frontend/Dockerfile') != ''
@@ -205,4 +197,3 @@ jobs:
           push: false
           load: true
           tags: todo-frontend:latest
-        continue-on-error: true

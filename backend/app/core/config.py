@@ -20,14 +20,25 @@ Bearerトークンを使用して認証を行います。
 ログイン後、受け取ったトークンを`Authorization`ヘッダーに設定してください。
 """
     API_V1_STR: str = "/api/v1"
-    
+
+    # 実行環境
+    ENVIRONMENT: str = "development"
+
+    @property
+    def is_development(self) -> bool:
+        return self.ENVIRONMENT == "development"
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == "production"
+
     # 環境変数から読み込む、デフォルト値はローカルDBを想定
     POSTGRES_USER: str = "postgres"
     POSTGRES_PASSWORD: str = "password"
     POSTGRES_SERVER: str = "127.0.0.1"
     POSTGRES_PORT: str = "5432"
     POSTGRES_DB: str = "tododb"
-    
+
     DATABASE_URL: str | None = None
 
     @property
@@ -36,11 +47,12 @@ Bearerトークンを使用して認証を行います。
             return self.DATABASE_URL
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
-    SECRET_KEY: str = "your-secret-key-change-me-in-production"
+    # 本番環境では必ず環境変数から設定すること
+    SECRET_KEY: str
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    # CORS 設定
+    # CORS 設定（本番環境では環境変数で厳密に制御）
     BACKEND_CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",

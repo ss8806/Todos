@@ -59,6 +59,9 @@ Todoリストアプリの仕様書です。
 | user_id | UUID | Foreign Key (users.id) | 所有ユーザーID |
 | title | VARCHAR(255) | Not Null | Todoのタイトル |
 | is_completed | BOOLEAN | Default: false | 完了フラグ |
+| priority | VARCHAR(10) | Default: 'low' | 優先度 (high / medium / low) |
+| due_date | TIMESTAMP | Nullable | 期限日時 |
+| tags | VARCHAR(500) | Nullable | タグ（カンマ区切り） |
 | created_at | TIMESTAMP | Default: now() | 作成日時 |
 
 ---
@@ -67,12 +70,24 @@ Todoリストアプリの仕様書です。
 
 ### 認証系
 - `POST /auth/register`: ユーザー登録
-- `POST /auth/login`: ログイン（トークン発行）
+- `POST /auth/token`: ログイン（アクセストークン取得）
+
+### ユーザー系
+- `GET /users/me`: 現在のユーザー情報取得
 
 ### Todo系
-- `GET /todos`: Todo一覧取得
+- `GET /todos`: Todo一覧取得（検索・フィルタ・ソート・ページネーション対応）
+  - クエリパラメータ:
+    - `search`: タイトル部分一致検索
+    - `is_completed`: 完了状態フィルタ (true / false)
+    - `priority`: 優先度フィルタ (high / medium / low)
+    - `tags`: タグフィルタ（カンマ区切り）
+    - `sort_by`: ソート項目 (created_at / priority / due_date)
+    - `sort_order`: ソート順 (asc / desc)
+    - `skip`: スキップ件数（ページネーション）
+    - `limit`: 取得件数上限（デフォルト100、最大100）
 - `POST /todos`: 新規Todo作成
-- `PATCH /todos/{id}`: Todo更新（タイトル・完了状態）
+- `PUT /todos/{id}`: Todo更新（タイトル・完了状態・優先度・期限・タグ）
 - `DELETE /todos/{id}`: Todo削除
 
 ---
