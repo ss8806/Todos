@@ -7,9 +7,17 @@ import { useTodos, TodoFilters } from "@/hooks/useTodos";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, LogOut, Loader2 } from "lucide-react";
+import { Plus, LogOut, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { TodoFilterPanel } from "./_components/TodoFilterPanel";
 import { TodoItemList } from "./_components/TodoItemList";
 import { TodoEditDialog } from "./_components/TodoEditDialog";
@@ -17,6 +25,10 @@ import { Todo } from "@/hooks/useTodos";
 
 export default function Home() {
   const [newTodo, setNewTodo] = useState("");
+  const [newPriority, setNewPriority] = useState<string>("");
+  const [newDueDate, setNewDueDate] = useState("");
+  const [newTags, setNewTags] = useState("");
+  const [showCreateDetails, setShowCreateDetails] = useState(false);
   const [filters, setFilters] = useState<TodoFilters>({
     sort_by: "created_at",
     sort_order: "desc",
@@ -39,15 +51,27 @@ export default function Home() {
   const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodo.trim()) return;
-    addTodoMutation.mutate(newTodo, {
-      onSuccess: () => {
-        setNewTodo("");
-        toast.success("タスクを追加しました");
+    addTodoMutation.mutate(
+      {
+        title: newTodo.trim(),
+        ...(newPriority ? { priority: newPriority as "high" | "medium" | "low" } : {}),
+        ...(newDueDate ? { due_date: new Date(newDueDate).toISOString() } : {}),
+        ...(newTags.trim() ? { tags: newTags.trim() } : {}),
       },
-      onError: () => {
-        toast.error("タスクの追加に失敗しました");
-      },
-    });
+      {
+        onSuccess: () => {
+          setNewTodo("");
+          setNewPriority("");
+          setNewDueDate("");
+          setNewTags("");
+          setShowCreateDetails(false);
+          toast.success("タスクを追加しました");
+        },
+        onError: () => {
+          toast.error("タスクの追加に失敗しました");
+        },
+      }
+    );
   };
 
   const handleLogout = () => {
@@ -143,23 +167,76 @@ export default function Home() {
 
         <Card className="mb-8">
           <CardContent className="pt-6">
-            <form onSubmit={handleAddTodo} className="flex gap-3 mb-4">
-              <Input
-                value={newTodo}
-                onChange={(e) => setNewTodo(e.target.value)}
-                placeholder="やることを入力..."
-                className="flex-1"
-              />
-              <Button type="submit" disabled={addTodoMutation.isPending}>
-                {addTodoMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+            <form onSubmit={handleAddTodo} className="space-y-4">
+              <div className="flex gap-3">
+                <Input
+                  value={newTodo}
+                  onChange={(e) => setNewTodo(e.target.value)}
+                  placeholder="やることを入力..."
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={addTodoMutation.isPending}>
+                  {addTodoMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      追加
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCreateDetails(!showCreateDetails)}
+                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+              >
+                {showCreateDetails ? (
+                  <ChevronUp className="w-4 h-4 mr-1" />
                 ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    追加
-                  </>
+                  <ChevronDown className="w-4 h-4 mr-1" />
                 )}
+                詳細設定
               </Button>
+
+              {showCreateDetails && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-4 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="create-priority">優先度</Label>
+                    <Select value={newPriority} onValueChange={(v) => setNewPriority(v || "")}>
+                      <SelectTrigger id="create-priority">
+                        <SelectValue placeholder="未設定" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">高</SelectItem>
+                        <SelectItem value="medium">中</SelectItem>
+                        <SelectItem value="low">低</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-due-date">期限</Label>
+                    <Input
+                      id="create-due-date"
+                      type="date"
+                      value={newDueDate}
+                      onChange={(e) => setNewDueDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="create-tags">タグ</Label>
+                    <Input
+                      id="create-tags"
+                      value={newTags}
+                      onChange={(e) => setNewTags(e.target.value)}
+                      placeholder="カンマ区切り"
+                    />
+                  </div>
+                </div>
+              )}
             </form>
 
             <TodoFilterPanel

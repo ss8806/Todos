@@ -45,10 +45,10 @@ export function useTodos(filters?: TodoFilters) {
   });
 
   const addTodoMutation = useMutation({
-    mutationFn: (title: string) =>
+    mutationFn: (data: { title: string; priority?: "high" | "medium" | "low"; due_date?: string; tags?: string }) =>
       apiFetch("/todos/", {
         method: "POST",
-        body: JSON.stringify({ title }),
+        body: JSON.stringify(data),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
