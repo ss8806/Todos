@@ -17,6 +17,9 @@
 - [backend/app/core/logging.py](file://backend/app/core/logging.py)
 - [backend/app/middleware/logging.py](file://backend/app/middleware/logging.py)
 - [backend/app/core/security.py](file://backend/app/core/security.py)
+- [backend/migrations/env.py](file://backend/migrations/env.py)
+- [backend/alembic.ini](file://backend/alembic.ini)
+- [backend/migrations/versions/000000000001_initial_schema.py](file://backend/migrations/versions/000000000001_initial_schema.py)
 </cite>
 
 ## 更新要旨
@@ -24,6 +27,7 @@
 - GitHub Actionsワークフローの統合：ci.ymlとe2e-tests.ymlの統合により、重複する処理を排除
 - Dockerコンテナ化の改善：uvとBunの導入によるパッケージ管理の高速化
 - 環境変数設定の強化：設定管理クラスを通じた柔軟な環境変数対応
+- **セキュリティ強化：E2EテストでのSECRET_KEY環境変数の追加により、データベースマイグレーション時の認証が強化されました**
 - ネットワーク構成の最適化：Mailpitメールサーバーの追加と設定
 - モニタリング設定の追加：構造化ログとリクエストログミドルウェアの導入
 
@@ -43,6 +47,7 @@
 - コード品質の維持：静的解析、ユニットテスト、型チェック、ESLintによるコード整形
 - 統合品質の確保：エンドツーエンドテスト（E2E）、Dockerイメージビルド検証
 - 自動化されたワークフロー：プッシュ・プルリクエスト・マージ時の各フェーズでの処理を自動化
+- **セキュリティ強化：E2EテストでのSECRET_KEY環境変数の追加により、データベースマイグレーション時の認証が強化されました**
 - モニタリングの強化：構造化ログとリクエストログミドルウェアによる運用監視
 
 ## プロジェクト構造
@@ -53,6 +58,7 @@ GitHub Actionsの設定は`.github/workflows/`ディレクトリに配置され�
 graph TB
 subgraph "GitHub Actions"
 CI["ci.yml<br/>統合CIワークフロー"]
+E2E["e2e-tests.yml<br/>E2Eテストワークフロー"]
 end
 subgraph "バックエンド"
 PY["backend/pyproject.toml<br/>依存関係管理"]
@@ -62,7 +68,8 @@ LOG["backend/app/core/logging.py<br/>ログ設定"]
 MLOG["backend/app/middleware/logging.py<br/>リクエストログミドルウェア"]
 MAIN["backend/app/main.py<br/>APIサーバー"]
 TESTS["backend/tests/<br/>テストコード"]
-end
+ALEMBIC["backend/migrations/env.py<br/>マイグレーション設定"]
+END
 subgraph "フロントエンド"
 PKG["frontend/package.json<br/>スクリプト管理"]
 PW["frontend/playwright.config.ts<br/>E2E設定"]
@@ -81,17 +88,21 @@ CI --> CFG
 CI --> LOG
 CI --> MLOG
 CI --> SEC
+CI --> ALEMBIC
+E2E --> CFG
+E2E --> SEC
+E2E --> ALEMBIC
 DC --> CFG
 DC --> MAIN
 ```
 
 **図の出典**
 - [.github/workflows/ci.yml:1-200](file://.github/workflows/ci.yml#L1-L200)
-- [.github/workflows/e2e-tests.yml:1-111](file://.github/workflows/e2e-tests.yml#L1-L111)
+- [.github/workflows/e2e-tests.yml:1-112](file://.github/workflows/e2e-tests.yml#L1-L112)
 
 **節の出典**
 - [.github/workflows/ci.yml:1-200](file://.github/workflows/ci.yml#L1-L200)
-- [.github/workflows/e2e-tests.yml:1-111](file://.github/workflows/e2e-tests.yml#L1-L111)
+- [.github/workflows/e2e-tests.yml:1-112](file://.github/workflows/e2e-tests.yml#L1-L112)
 
 ## コアコンポーネント
 ### 統合CIワークフロー（ci.yml）
@@ -135,8 +146,25 @@ ci.ymlは以下のジョブを定義し、プッシュ・プルリクエスト�
 **節の出典**
 - [.github/workflows/ci.yml:1-200](file://.github/workflows/ci.yml#L1-L200)
 
+### E2Eテストワークフロー（e2e-tests.yml）
+e2e-tests.ymlはエンドツーエンドテスト専用のワークフローで、以下のジョブを定義します：
+
+1. **E2Eテスト実行**
+   - Postgres 16サービスの起動（health checks付き）
+   - backend/frontendの依存関係インストール
+   - Playwrightブラウザのインストール
+   - **データベースマイグレーションの実行（SECRET_KEY追加）**
+   - APIサーバーの起動（SECRET_KEY追加）
+   - フロントエンドサーバーの起動
+   - E2Eテストの実行（CI環境設定）
+
+**更新** セキュリティ強化：E2Eテストジョブにおいて、データベースマイグレーションとAPIサーバー起動時にSECRET_KEY環境変数が追加されました。これにより、マイグレーション実行時の認証が強化され、セキュリティリスクが低減しました。
+
+**節の出典**
+- [.github/workflows/e2e-tests.yml:1-112](file://.github/workflows/e2e-tests.yml#L1-L112)
+
 ## アーキテクチャ概観
-以下は、ci.ymlのジョブ間の依存関係と実行フローを示す図です。
+以下は、ci.ymlとe2e-tests.ymlのジョブ間の依存関係と実行フローを示す図です。
 
 ```mermaid
 graph TB
@@ -153,6 +181,17 @@ BL --> FB
 FB --> DBT
 FT --> DBT
 end
+subgraph "E2Eテストワークフロー"
+E2E["E2Eテスト"]
+EM["データベースマイグレーション"]
+AS["APIサーバー起動"]
+FS["フロントエンド起動"]
+ET["E2Eテスト実行"]
+E2E --> EM
+EM --> AS
+AS --> FS
+FS --> ET
+end
 subgraph "サービス"
 PG["Postgres 16"]
 MP["Mailpit"]
@@ -160,14 +199,18 @@ end
 BT --> PG
 DBT --> PG
 BT --> MP
+EM --> PG
+AS --> PG
 ```
 
 **図の出典**
 - [.github/workflows/ci.yml:10-200](file://.github/workflows/ci.yml#L10-L200)
+- [.github/workflows/e2e-tests.yml:10-112](file://.github/workflows/e2e-tests.yml#L10-L112)
 - [docker-compose.yml:14-25](file://docker-compose.yml#L14-L25)
 
 **節の出典**
 - [.github/workflows/ci.yml:10-200](file://.github/workflows/ci.yml#L10-L200)
+- [.github/workflows/e2e-tests.yml:10-112](file://.github/workflows/e2e-tests.yml#L10-L112)
 
 ## 詳細コンポーネント分析
 
@@ -208,6 +251,11 @@ ci.ymlとe2e-tests.ymlでは、環境変数をジョブレベルで設定して�
 - Frontend Buildジョブ
   - NEXT_PUBLIC_API_URL: `http://localhost:8000/api/v1`
 
+- E2Eテストジョブ（新規追加）
+  - **データベースマイグレーション時**：DATABASE_URL、SECRET_KEY
+  - **APIサーバー起動時**：DATABASE_URL、SECRET_KEY
+  - **フロントエンド起動時**：NEXT_PUBLIC_API_URL
+
 - 設定管理クラス（config.py）
   - 環境変数から読み込む設定：POSTGRES_USER、POSTGRES_PASSWORD、POSTGRES_SERVER、POSTGRES_PORT、POSTGRES_DB
   - 本番環境用設定：SECRET_KEY、ALGORITHM、ACCESS_TOKEN_EXPIRE_MINUTES
@@ -216,11 +264,12 @@ ci.ymlとe2e-tests.ymlでは、環境変数をジョブレベルで設定して�
   - フロントエンドURL：FRONTEND_URL
   - パスワードリセット設定：RESET_TOKEN_EXPIRE_HOURS
 
-**更新** 環境変数設定の強化：設定管理クラスが導入され、環境変数の柔軟な対応が可能になりました。Rate Limiting設定も環境変数で制御可能となっています。
+**更新** 環境変数設定の強化：設定管理クラスが導入され、環境変数の柔軟な対応が可能になりました。Rate Limiting設定も環境変数で制御可能となっています。E2EテストにおいてSECRET_KEY環境変数が追加され、セキュリティが強化されました。
 
 **節の出典**
 - [.github/workflows/ci.yml:78-82](file://.github/workflows/ci.yml#L78-L82)
 - [.github/workflows/ci.yml:165-167](file://.github/workflows/ci.yml#L165-L167)
+- [.github/workflows/e2e-tests.yml:56-70](file://.github/workflows/e2e-tests.yml#L56-L70)
 - [backend/app/core/config.py:35-88](file://backend/app/core/config.py#L35-L88)
 
 ### モニタリング設定とログ管理
@@ -287,8 +336,36 @@ Playwrightの設定は、ci環境（CI=true）での動作を調整するため�
 **節の出典**
 - [frontend/playwright.config.ts:1-66](file://frontend/playwright.config.ts#L1-L66)
 
+### データベースマイグレーションとセキュリティ強化
+E2Eテストにおけるデータベースマイグレーションプロセスは、SECRET_KEY環境変数の追加によりセキュリティが強化されています。
+
+```mermaid
+sequenceDiagram
+participant E2E as E2Eテストワークフロー
+participant DB as Postgres
+participant ALEMBIC as Alembic
+participant SEC as 設定管理
+E2E->>DB : DATABASE_URL、SECRET_KEY環境変数
+E2E->>ALEMBIC : uv run alembic upgrade head
+ALEMBIC->>SEC : settings.SECRET_KEY読み込み
+SEC-->>ALEMBIC : 認証キー提供
+ALEMBIC->>DB : マイグレーション実行
+DB-->>ALEMBIC : 成功応答
+ALEMBIC-->>E2E : マイグレーション完了
+```
+
+**図の出典**
+- [.github/workflows/e2e-tests.yml:56-62](file://.github/workflows/e2e-tests.yml#L56-L62)
+- [backend/migrations/env.py:70-80](file://backend/migrations/env.py#L70-L80)
+- [backend/app/core/config.py:50-53](file://backend/app/core/config.py#L50-L53)
+
+**節の出典**
+- [.github/workflows/e2e-tests.yml:56-62](file://.github/workflows/e2e-tests.yml#L56-L62)
+- [backend/migrations/env.py:70-80](file://backend/migrations/env.py#L70-L80)
+- [backend/app/core/config.py:50-53](file://backend/app/core/config.py#L50-L53)
+
 ## 依存関係分析
-ci.ymlのジョブ間の依存関係は以下の通りです：
+ci.ymlとe2e-tests.ymlのジョブ間の依存関係は以下の通りです：
 
 ```mermaid
 graph LR
@@ -297,13 +374,19 @@ FL["Frontend Lint"] --> FT["Frontend Test"]
 BL --> FB["Frontend Build"]
 FB --> DBT["Docker Build Test"]
 FT --> DBT
+E2E["E2Eテスト"] --> EM["データベースマイグレーション"]
+EM --> AS["APIサーバー起動"]
+AS --> FS["フロントエンド起動"]
+FS --> ET["E2Eテスト実行"]
 ```
 
 **図の出典**
 - [.github/workflows/ci.yml:10-200](file://.github/workflows/ci.yml#L10-L200)
+- [.github/workflows/e2e-tests.yml:10-112](file://.github/workflows/e2e-tests.yml#L10-L112)
 
 **節の出典**
 - [.github/workflows/ci.yml:10-200](file://.github/workflows/ci.yml#L10-L200)
+- [.github/workflows/e2e-tests.yml:10-112](file://.github/workflows/e2e-tests.yml#L10-L112)
 
 ## パフォーマンス考慮事項
 - Dockerイメージビルドの高速化
@@ -314,11 +397,12 @@ FT --> DBT
 - E2Eテストの安定性
   - Playwrightのretries設定（CI環境では2回）により、ネットワークや環境のわずかな不安定性に対応
   - workersを1に設定することで、レートリミットやリソース競合を回避
+  - **SECRET_KEY環境変数の追加により、マイグレーション時の認証が強化され、テストの安定性が向上**
 
 - テストの並列実行
   - E2Eテストはworkers: 1に設定されているため、並列実行は無効化されていますが、安定性を重視しています
 
-**更新** Dockerコンテナ化の改善：uvとBunの導入により、パッケージ管理とビルドプロセスのパフォーマンスが大幅に向上しました。
+**更新** Dockerコンテナ化の改善：uvとBunの導入により、パッケージ管理とビルドプロセスのパフォーマンスが大幅に向上しました。E2Eテストのセキュリティ強化により、認証プロセスの安定性が向上しました。
 
 **節の出典**
 - [.github/workflows/ci.yml:23-30](file://.github/workflows/ci.yml#L23-L30)
@@ -339,6 +423,7 @@ FT --> DBT
     - 起動確認のcurlコマンドを確認（backend:8000, frontend:3000）
     - BASE_URLとNEXT_PUBLIC_API_URLの設定確認
     - CI環境変数（CI=true）の設定確認
+    - **SECRET_KEY環境変数の設定確認（マイグレーション時）**
 
 - テストカバレッジアップロード失敗
   - 症状：Codecovへのアップロードに失敗
@@ -367,18 +452,27 @@ FT --> DBT
     - 設定クラスの環境変数読み込み確認
     - CORS設定の本番環境対応確認
 
-**更新** 新しいトラブルシューティング項目の追加：Mailpitメールサーバーと設定管理に関するトラブルシューティングが追加されました。
+- **マイグレーション認証エラー（新規追加）**
+  - 症状：データベースマイグレーション時に認証エラー
+  - 対処法：
+    - SECRET_KEY環境変数の設定確認
+    - 設定管理クラスのSECRET_KEY読み込み確認
+    - JWTシークレットキーの形式確認
+
+**更新** 新しいトラブルシューティング項目の追加：Mailpitメールサーバーと設定管理に関するトラブルシューティングが追加されました。マイグレーション認証エラーに関する新しい項目が追加されました。
 
 **節の出典**
 - [.github/workflows/ci.yml:78-90](file://.github/workflows/ci.yml#L78-L90)
 - [docker-compose.yml:14-25](file://docker-compose.yml#L14-L25)
 - [backend/app/core/config.py:85-88](file://backend/app/core/config.py#L85-L88)
+- [.github/workflows/e2e-tests.yml:56-70](file://.github/workflows/e2e-tests.yml#L56-L70)
 
 ## 結論
 本プロジェクトのGitHub Actions設定は、以下の点で効果的なCI/CDパイプラインを提供しています：
 - 静的解析、ユニットテスト、E2Eテスト、Dockerイメージビルドの統合自動化
 - Dockerコンテナ化の高速化（uv、Bunの導入）
 - 環境変数設定の柔軟な管理（設定管理クラスの導入）
+- **セキュリティ強化：E2EテストでのSECRET_KEY環境変数の追加により、データベースマイグレーション時の認証が強化されました**
 - モニタリングの強化（構造化ログ、リクエストログミドルウェア）
 - 開発環境の最適化（Mailpitメールサーバーの統合）
 
@@ -388,3 +482,4 @@ FT --> DBT
 - Codecovレポートの品質向上（カバレッジ基準の設定）
 - 設定管理の拡張（環境別の設定ファイルの導入）
 - モニタリングの拡充（パフォーマンスメトリクスの追加）
+- **セキュリティの継続的強化（認証プロセスの監視と改善）**
