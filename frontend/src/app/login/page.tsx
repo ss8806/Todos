@@ -33,6 +33,8 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.email, data.password);
+      // Cookieの更新をサーバーに反映させるため refresh してから遷移
+      router.refresh();
       router.push("/");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "ログインに失敗しました";
