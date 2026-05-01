@@ -1,3 +1,4 @@
+import uuid
 from typing import Generator
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -20,11 +21,16 @@ async def get_current_user(
             detail="認証情報を検証できませんでした",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    email: str = payload.get("sub")
-    if email is None:
+    user_id_str: str = payload.get("sub")
+    if user_id_str is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="トークンが無効です")
-    
-    user = await crud_user.get_user_by_email(db, email=email)
+
+    try:
+        user_id = uuid.UUID(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="トークンが無効です")
+
+    user = await crud_user.get_user_by_id(db, user_id=user_id)
     if user is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="ユーザーが見つかりません")
     return user

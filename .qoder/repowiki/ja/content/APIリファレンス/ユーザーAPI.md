@@ -1,24 +1,26 @@
 # ユーザーAPI
 
 <cite>
-**この文書で参照されているファイル**
+**このドキュメントで参照されているファイル**
 - [backend/app/api/api_v1/endpoints/users.py](file://backend/app/api/api_v1/endpoints/users.py)
 - [backend/app/api/api_v1/endpoints/auth.py](file://backend/app/api/api_v1/endpoints/auth.py)
 - [backend/app/api/deps.py](file://backend/app/api/deps.py)
 - [backend/app/core/security.py](file://backend/app/core/security.py)
-- [backend/app/core/config.py](file://backend/app/core/config.py)
-- [backend/app/schemas/user.py](file://backend/app/schemas/user.py)
 - [backend/app/models/user.py](file://backend/app/models/user.py)
-- [backend/app/crud/crud_user.py](file://backend/app/crud/crud_user.py)
-- [backend/app/api/api_v1/api.py](file://backend/app/api/api_v1/api.py)
+- [backend/app/schemas/user.py](file://backend/app/schemas/user.py)
+- [backend/app/schemas/token.py](file://backend/app/schemas/token.py)
+- [backend/app/middleware/error_handler.py](file://backend/app/middleware/error_handler.py)
 - [backend/app/main.py](file://backend/app/main.py)
+- [frontend/src/app/login/page.tsx](file://frontend/src/app/login/page.tsx)
+- [frontend/src/app/register/page.tsx](file://frontend/src/app/register/page.tsx)
+- [frontend/src/middleware.ts](file://frontend/src/middleware.ts)
 </cite>
 
 ## 目次
 1. [はじめに](#はじめに)
 2. [プロジェクト構造](#プロジェクト構造)
 3. [コアコンポーネント](#コアコンポーネント)
-4. [アーキテクチャ概要](#アーキテクチャ概要)
+4. [アーキテクチャ概観](#アーキテクチャ概観)
 5. [詳細コンポーネント分析](#詳細コンポーネント分析)
 6. [依存関係分析](#依存関係分析)
 7. [パフォーマンス考慮事項](#パフォーマンス考慮事項)
@@ -26,251 +28,340 @@
 9. [結論](#結論)
 
 ## はじめに
-本ドキュメントは、Todoアプリケーションにおける「ユーザー情報管理」のRESTful APIエンドポイントについての詳細仕様を提供します。特に以下のエンドポイントを網羅的に解説します：
-- ユーザー情報取得エンドポイント：GET /api/v1/users/me
-- ユーザー情報更新エンドポイント：PUT /api/v1/users/me（現状未実装）
-- ユーザー削除エンドポイント：DELETE /api/v1/users/me（現状未実装）
-- 認証トークン管理、セッション有効期限、再認証プロセス
+本ドキュメントは、Todoアプリケーションにおける「ユーザー管理」関連のRESTful APIエンドポイントの詳細なリファレンスです。主に以下の機能を網羅します：
+- 現在のユーザー情報取得（GET /api/v1/users/me）
+- JWT認証トークンを使用した認可プロセス
+- 認証・ユーザー権限の検証フロー
+- パスワード変更機能（Forgot/Reset）
+- リクエスト/レスポンススキーマ、認証要件、エラーコード
+- フロントエンドでの実装パターン
 
-また、保護されたフィールド（例：パスワードハッシュ）の扱い方や、認証フロー、レスポンススキーマについても説明します。
+本APIはFastAPIで実装されており、JWT Bearer認証を用います。エラーハンドリングは共通のミドルウェアによって一貫した形式で返却されます。
 
 ## プロジェクト構造
-バックエンドはFastAPIフレームワークを採用し、APIバージョン管理として「/api/v1」プレフィックスが使用されています。ユーザー関連のエンドポイントは「/api/v1/users」配下に配置され、認証はJWT BearerトークンによるOAuth2パスワードフローで行われます。
+バックエンドはFastAPI、ORMとしてSQLModelを使用。認証・ユーザー管理・エラーハンドリングの各層が分離されています。フロントエンドはNext.jsで実装され、認証不要なページ（ログイン/登録/パスワードリセット）と認証が必要なページ（Todo一覧など）があります。
 
 ```mermaid
 graph TB
-subgraph "APIルーター"
-A["/api/v1/auth<br/>認証エンドポイント"]
-B["/api/v1/users<br/>ユーザー情報エンドポイント"]
-C["/api/v1/todos<br/>TODO管理エンドポイント"]
+subgraph "フロントエンド"
+FE_Login["/login<br/>Next.js Page"]
+FE_Register["/register<br/>Next.js Page"]
+FE_MW["middleware.ts<br/>認証ルート制御"]
 end
-subgraph "認証フロー"
-D["POST /api/v1/auth/register<br/>ユーザー登録"]
-E["POST /api/v1/auth/token<br/>アクセストークン取得"]
-F["GET /api/v1/users/me<br/>自身のユーザー情報取得"]
+subgraph "バックエンド"
+BE_Main["main.py<br/>FastAPIアプリケーション"]
+BE_Router["APIルーター<br/>/api/v1/*"]
+BE_Auth["/auth エンドポイント"]
+BE_Users["/users エンドポイント"]
+BE_Deps["deps.py<br/>認可・トークン検証"]
+BE_Security["security.py<br/>JWT/パスワードハッシュ"]
+BE_DB["SQLModel ORM<br/>Userモデル"]
+BE_Err["error_handler.py<br/>エラーハンドラー"]
 end
-A --> E
-A --> D
-B --> F
+FE_Login --> BE_Auth
+FE_Register --> BE_Auth
+FE_MW --> BE_Main
+BE_Main --> BE_Router
+BE_Router --> BE_Auth
+BE_Router --> BE_Users
+BE_Users --> BE_Deps
+BE_Auth --> BE_Deps
+BE_Deps --> BE_Security
+BE_Deps --> BE_DB
+BE_Main --> BE_Err
 ```
 
 **図の出典**
-- [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
-- [backend/app/api/api_v1/endpoints/auth.py:1-53](file://backend/app/api/api_v1/endpoints/auth.py#L1-L53)
+- [backend/app/main.py:1-168](file://backend/app/main.py#L1-L168)
+- [backend/app/api/api_v1/endpoints/auth.py:1-117](file://backend/app/api/api_v1/endpoints/auth.py#L1-L117)
 - [backend/app/api/api_v1/endpoints/users.py:1-14](file://backend/app/api/api_v1/endpoints/users.py#L1-L14)
+- [backend/app/api/deps.py:1-37](file://backend/app/api/deps.py#L1-L37)
+- [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
+- [backend/app/models/user.py:1-16](file://backend/app/models/user.py#L1-L16)
+- [backend/app/middleware/error_handler.py:1-149](file://backend/app/middleware/error_handler.py#L1-L149)
 
 **節の出典**
-- [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
-- [backend/app/main.py:128-128](file://backend/app/main.py#L128-L128)
+- [backend/app/main.py:1-168](file://backend/app/main.py#L1-L168)
+- [frontend/src/middleware.ts:1-35](file://frontend/src/middleware.ts#L1-L35)
 
 ## コアコンポーネント
-- 認証ルーター（/api/v1/auth）：ユーザー登録、アクセストークン取得（JWT Bearer）を行う。
-- ユーザールーター（/api/v1/users）：現在のユーザー情報取得（GET /me）のみ実装済み。
-- 依存関係ヘルパー（deps.py）：OAuth2 Bearerトークンの検証、現在のユーザー取得。
-- セキュリティユーティリティ（security.py）：パスワードハッシュ化、JWTトークンの生成・検証。
-- 設定（config.py）：SECRET_KEY、アルゴリズム、アクセストークン有効期限、レートリミットなど。
-- スキーマ（schemas/user.py）：UserBase、UserCreate、UserRead（レスポンス用）。
-- モデル（models/user.py）：DBテーブル定義、パスワードハッシュフィールド。
-- CRUD（crud/crud_user.py）：ユーザーの登録、ユーザー名での検索。
+- 認証エンドポイント（/api/v1/auth）
+  - POST /api/v1/auth/register：新規ユーザー登録（レスポンススキーマ：UserRead）
+  - POST /api/v1/auth/token：ログイン（JWTアクセストークン取得、レスポンススキーマ：Token）
+  - POST /api/v1/auth/forgot-password：パスワードリセットメール送信
+  - POST /api/v1/auth/reset-password：パスワードリセット（トークン検証＋新パスワード設定）
+
+- ユーザー情報エンドポイント（/api/v1/users）
+  - GET /api/v1/users/me：現在の認証中のユーザー情報を取得（レスポンススキーマ：UserRead）
+
+- 認可・セキュリティ
+  - OAuth2PasswordBearer（/api/v1/auth/token）によるトークン取得
+  - get_current_user によるJWTペイロード検証とユーザー取得
+  - create_access_token / decode_access_token によるJWT生成・解析
+  - verify_password / get_password_hash によるパスワード検証・ハッシュ化
+
+- エラーハンドリング
+  - 共通エラーレスポンス形式（ErrorResponse）への整形
+  - 422（バリデーションエラー）、400/401/403/404/429/500などのステータスコード対応
 
 **節の出典**
-- [backend/app/api/api_v1/endpoints/auth.py:1-53](file://backend/app/api/api_v1/endpoints/auth.py#L1-L53)
+- [backend/app/api/api_v1/endpoints/auth.py:1-117](file://backend/app/api/api_v1/endpoints/auth.py#L1-L117)
 - [backend/app/api/api_v1/endpoints/users.py:1-14](file://backend/app/api/api_v1/endpoints/users.py#L1-L14)
-- [backend/app/api/deps.py:1-31](file://backend/app/api/deps.py#L1-L31)
+- [backend/app/api/deps.py:1-37](file://backend/app/api/deps.py#L1-L37)
 - [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
-- [backend/app/core/config.py:1-73](file://backend/app/core/config.py#L1-L73)
-- [backend/app/schemas/user.py:1-12](file://backend/app/schemas/user.py#L1-L12)
-- [backend/app/models/user.py:1-16](file://backend/app/models/user.py#L1-L16)
-- [backend/app/crud/crud_user.py:1-22](file://backend/app/crud/crud_user.py#L1-L22)
+- [backend/app/middleware/error_handler.py:1-149](file://backend/app/middleware/error_handler.py#L1-L149)
 
-## アーキテクチャ概要
-認証・ユーザー管理の全体像は以下の通りです。JWT Bearer認証がOpenAPIセキュリティスキーマとして定義され、各エンドポイントは依存関係ヘルパーを通じて現在のユーザーを取得します。
-
-```mermaid
-graph TB
-Client["クライアント"]
-Auth["/api/v1/auth/token<br/>アクセストークン取得"]
-Users["/api/v1/users/me<br/>ユーザー情報取得"]
-Deps["deps.get_current_user<br/>トークン検証"]
-Sec["security.decode_access_token<br/>JWT検証"]
-DB["DB: users テーブル"]
-Client --> Auth
-Auth --> Sec
-Client --> Users
-Users --> Deps --> Sec
-Deps --> DB
-```
-
-**図の出典**
-- [backend/app/main.py:73-102](file://backend/app/main.py#L73-L102)
-- [backend/app/api/deps.py:10-31](file://backend/app/api/deps.py#L10-L31)
-- [backend/app/core/security.py:29-35](file://backend/app/core/security.py#L29-L35)
-- [backend/app/models/user.py:12-13](file://backend/app/models/user.py#L12-L13)
-
-## 詳細コンポーネント分析
-
-### GET /api/v1/users/me（ユーザー情報取得）
-- 認証要件
-  - Bearerトークンが必要。トークンはAuthorization: Bearer {token}形式で送信。
-  - トークンの検証はdeps.get_current_userが行い、失敗時は401エラー。
-- 処理フロー
-  - 依存関係：dbセッション、OAuth2 Bearerトークン。
-  - トークンからユーザー名を抽出し、DBから該当ユーザーを取得。
-  - 見つからない場合は401エラー。
-- 応答スキーマ（UserRead）
-  - id: UUID（レスポンスに含まれる）
-  - username: 文字列（レスポンスに含まれる）
-  - 注意：hashed_password（パスワードハッシュ）はレスポンスには含まれない（保護されたフィールド）
-- 保護されたフィールド
-  - hashed_passwordはDBには保存されますが、APIレスポンスには含まれません。
+## アーキテクチャ概観
+JWT認証フローの全体像を以下に示します。フロントエンドは認証不要なページ（ログイン/登録/パスワードリセット）と認証が必要なページ（Todo一覧など）に分かれ、認証が必要なページにはmiddlewareでトークンの有無をチェックしています。
 
 ```mermaid
 sequenceDiagram
-participant C as "クライアント"
-participant U as "GET /api/v1/users/me"
-participant D as "deps.get_current_user"
-participant S as "security.decode_access_token"
-participant DB as "DB : users"
-C->>U : Authorization : Bearer {token}
-U->>D : トークン検証
-D->>S : トークンをデコード
-S-->>D : {sub : username}
-D->>DB : usernameでユーザー検索
-DB-->>D : Userオブジェクト
-D-->>U : current_user
-U-->>C : {id, username}
+participant FE as "フロントエンド"
+participant AUTH as "認証エンドポイント"
+participant SEC as "セキュリティ/トークン"
+participant DEPS as "認可依存"
+participant DB as "データベース"
+FE->>AUTH : "POST /api/v1/auth/register"
+AUTH->>SEC : "パスワードハッシュ化"
+AUTH->>DB : "ユーザー登録"
+DB-->>AUTH : "登録完了"
+AUTH-->>FE : "UserRead"
+FE->>AUTH : "POST /api/v1/auth/token"
+AUTH->>DB : "メールアドレスでユーザー取得"
+AUTH->>SEC : "パスワード検証"
+SEC-->>AUTH : "一致確認"
+AUTH->>SEC : "JWTトークン生成"
+AUTH-->>FE : "Token(access_token, token_type)"
+FE->>DEPS : "GET /api/v1/users/me"
+DEPS->>SEC : "JWTデコード"
+SEC-->>DEPS : "ペイロード(sub : userId)"
+DEPS->>DB : "userIdでユーザー取得"
+DB-->>DEPS : "User"
+DEPS-->>FE : "UserRead"
 ```
 
 **図の出典**
-- [backend/app/api/deps.py:12-31](file://backend/app/api/deps.py#L12-L31)
-- [backend/app/core/security.py:29-35](file://backend/app/core/security.py#L29-L35)
-- [backend/app/models/user.py:12-13](file://backend/app/models/user.py#L12-L13)
-- [backend/app/schemas/user.py:10-12](file://backend/app/schemas/user.py#L10-L12)
+- [backend/app/api/api_v1/endpoints/auth.py:1-117](file://backend/app/api/api_v1/endpoints/auth.py#L1-L117)
+- [backend/app/api/deps.py:1-37](file://backend/app/api/deps.py#L1-L37)
+- [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
+- [backend/app/models/user.py:1-16](file://backend/app/models/user.py#L1-L16)
+
+## 詳細コンポーネント分析
+
+### 認証エンドポイント（/api/v1/auth）
+- POST /api/v1/auth/register
+  - 認証要件：なし
+  - 概要：新規ユーザー登録
+  - リクエストスキーマ：UserCreate（email, password）
+  - 応答スキーマ：UserRead（id, email）
+  - 重複エラー：400（メールアドレス重複時）
+  - 成功コード：201
+  - 実装ポイント：emailの一意性チェック、パスワードハッシュ化、DB登録
+
+- POST /api/v1/auth/token
+  - 認証要件：なし
+  - 概要：ログインしJWTアクセストークンを取得
+  - 認証方式：OAuth2PasswordRequestForm（username, password）
+  - 応答スキーマ：Token（access_token, token_type）
+  - 失敗エラー：401（認証情報不正時）
+  - 成功コード：200
+  - 実装ポイント：email→hashed_password照合、ACCESS_TOKEN_EXPIRE_MINUTESに基づく有効期限付与
+
+- POST /api/v1/auth/forgot-password
+  - 認証要件：なし
+  - 概要：パスワードリセットメール送信（ユーザーが存在しない場合でも200）
+  - リクエストスキーマ：ForgotPasswordRequest（email）
+  - 応答スキーマ：JSONメッセージ
+  - 実装ポイント：既存トークンの無効化→新トークン作成→メール送信
+
+- POST /api/v1/auth/reset-password
+  - 認証要件：なし
+  - 概要：パスワードリセット（トークン検証＋新パスワード設定）
+  - リクエストスキーマ：ResetPasswordRequest（token, new_password）
+  - 応答スキーマ：JSONメッセージ
+  - 失敗エラー：400（無効/期限切れ）、404（ユーザー不在）
+  - 実装ポイント：トークン検証→ユーザー取得→新パスワードハッシュ化→トークン使用済みマーク
 
 **節の出典**
-- [backend/app/api/api_v1/endpoints/users.py:9-14](file://backend/app/api/api_v1/endpoints/users.py#L9-L14)
-- [backend/app/api/deps.py:12-31](file://backend/app/api/deps.py#L12-L31)
-- [backend/app/schemas/user.py:10-12](file://backend/app/schemas/user.py#L10-L12)
-- [backend/app/models/user.py:12-13](file://backend/app/models/user.py#L12-L13)
+- [backend/app/api/api_v1/endpoints/auth.py:1-117](file://backend/app/api/api_v1/endpoints/auth.py#L1-L117)
+- [backend/app/schemas/user.py:1-13](file://backend/app/schemas/user.py#L1-L13)
+- [backend/app/schemas/token.py:1-10](file://backend/app/schemas/token.py#L1-L10)
+- [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
 
-### PUT /api/v1/users/me（ユーザー情報更新）【現状未実装】
-- 現状の実装
-  - 対応するエンドポイントは未実装です。
-- 今後の実装案（提案）
-  - 認証要件：同上（Bearerトークン必須）。
-  - 入力バリデーション：usernameの重複チェック、既存ユーザー名の変更可否。
-  - パスワード変更処理：現在のパスワード検証、新しいパスワードのハッシュ化。
-  - プロフィール更新：usernameなどの基本情報更新。
-  - 応答スキーマ：UserRead（変更後のユーザー情報）。
-- 保護されたフィールド
-  - hashed_passwordは更新処理経路で変更しない（内部的にハッシュ化された値のみ扱う）。
+### ユーザー情報エンドポイント（/api/v1/users）
+- GET /api/v1/users/me
+  - 認証要件：JWT Bearer（Authorization: Bearer <token>）
+  - 概要：現在の認証中のユーザー情報を取得
+  - 応答スキーマ：UserRead（id, email）
+  - 失敗エラー：401（トークン無効/ユーザー不在時）
+  - 実装ポイント：get_current_user 依存により、sub（userId）からDB取得
 
-備考：現時点ではこのエンドポイントは利用できません。実装予定の詳細については、開発チームにお問い合わせください。
+**節の出典**
+- [backend/app/api/api_v1/endpoints/users.py:1-14](file://backend/app/api/api_v1/endpoints/users.py#L1-L14)
+- [backend/app/api/deps.py:1-37](file://backend/app/api/deps.py#L1-L37)
+- [backend/app/schemas/user.py:1-13](file://backend/app/schemas/user.py#L1-L13)
 
-### DELETE /api/v1/users/me（ユーザー削除）【現状未実装】
-- 現状の実装
-  - 対応するエンドポイントは未実装です。
-- 今後の実装案（提案）
-  - 認証要件：同上（Bearerトークン必須）。
-  - 削除プロセス：本人確認（現在のユーザー）に基づく削除。
-  - データクリーンアップ：関連するtodosレコードの処理（論理削除または物理削除）。
-  - 確認ダイアログ：フロントエンドでユーザーに削除の確認を求めるUIを提供。
-  - 応答スキーマ：削除結果を示すJSON（例：{ "status": "success" }）。
-- 保護されたフィールド
-  - hashed_passwordは削除対象外（DBから物理削除される）。
+### 認可・セキュリティ
+- OAuth2PasswordBearer
+  - tokenUrl：/api/v1/auth/token
+  - /users/me などで Depends によりトークン検証
 
-備考：現時点ではこのエンドポイントは利用できません。実装予定の詳細については、開発チームにお問い合わせください。
+- JWTトークン
+  - 生成：create_access_token（sub: userId, 有効期限）
+  - 解析：decode_access_token（JWTError時はNone）
+  - 検証：get_current_user でペイロードのsub→UUID変換→DB取得
 
-### 認証トークン管理、セッション有効期限、再認証プロセス
-- トークン管理
-  - JWT Bearerトークンを使用。認証エンドポイントはPOST /api/v1/auth/token。
-  - トークンの有効期限はACCESS_TOKEN_EXPIRE_MINUTESで設定可能。
-- 有効期限
-  - トークン生成時にexpを設定し、期限切れの場合は401エラー。
-- 再認証プロセス
-  - トークンが期限切れまたは無効な場合、再度ログイン（/api/v1/auth/token）が必要。
-- OpenAPIセキュリティスキーマ
-  - BearerAuthがOpenAPIに定義されており、Swagger/UI上で認証を設定可能。
+- パスワード
+  - verify_password（平文 vs hashed_password）
+  - get_password_hash（パスワードハッシュ化）
 
+**節の出典**
+- [backend/app/api/deps.py:1-37](file://backend/app/api/deps.py#L1-L37)
+- [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
+
+### データモデル
+- User（SQLModel）
+  - id（UUID, PK）
+  - email（Unique, Index, EmailStr）
+  - hashed_password（str, 非NULL）
+  - todos（Relationship）
+
+- UserCreate/UserRead（Pydantic）
+  - UserCreate：email, password
+  - UserRead：id, email
+
+- Token（Pydantic）
+  - access_token, token_type
+
+**節の出典**
+- [backend/app/models/user.py:1-16](file://backend/app/models/user.py#L1-L16)
+- [backend/app/schemas/user.py:1-13](file://backend/app/schemas/user.py#L1-L13)
+- [backend/app/schemas/token.py:1-10](file://backend/app/schemas/token.py#L1-L10)
+
+### APIワークフロー（認証→ユーザー情報取得）
+```mermaid
+sequenceDiagram
+participant Client as "クライアント"
+participant Auth as "POST /api/v1/auth/token"
+participant Users as "GET /api/v1/users/me"
+participant Deps as "get_current_user"
+participant Sec as "JWT/パスワード"
+participant DB as "DB"
+Client->>Auth : "username/password"
+Auth->>DB : "emailでユーザー取得"
+Auth->>Sec : "verify_password"
+Sec-->>Auth : "true/false"
+Auth-->>Client : "access_token"
+Client->>Users : "Authorization : Bearer access_token"
+Users->>Deps : "依存解決"
+Deps->>Sec : "decode_access_token"
+Sec-->>Deps : "payload(sub=userId)"
+Deps->>DB : "userIdでユーザー取得"
+DB-->>Deps : "User"
+Deps-->>Client : "UserRead"
+```
+
+**図の出典**
+- [backend/app/api/api_v1/endpoints/auth.py:36-54](file://backend/app/api/api_v1/endpoints/auth.py#L36-L54)
+- [backend/app/api/api_v1/endpoints/users.py:9-13](file://backend/app/api/api_v1/endpoints/users.py#L9-L13)
+- [backend/app/api/deps.py:13-36](file://backend/app/api/deps.py#L13-L36)
+- [backend/app/core/security.py:29-34](file://backend/app/core/security.py#L29-L34)
+
+### 認証フロー（Forgot/Reset）
 ```mermaid
 flowchart TD
-Start(["リクエスト受信"]) --> CheckToken["AuthorizationヘッダーのBearerトークンを確認"]
-CheckToken --> Decode["JWTデコード"]
-Decode --> Valid{"トークン有効？"}
-Valid --> |いいえ| Err401["401 Unauthorized"]
-Valid --> |はい| FindUser["DBからユーザー検索"]
-FindUser --> Found{"ユーザー存在？"}
-Found --> |いいえ| Err401
-Found --> |はい| Allow["処理を許可"]
+Start(["開始"]) --> CheckUser["メールアドレスでユーザー存在確認"]
+CheckUser --> Exists{"ユーザー存在？"}
+Exists --> |はい| Invalidate["既存リセットトークンを無効化"]
+Invalidate --> CreateToken["新規リセットトークン作成"]
+CreateToken --> SendMail["リセットメール送信"]
+Exists --> |いいえ| SendMail
+SendMail --> Reset["POST /api/v1/auth/reset-password"]
+Reset --> VerifyToken["トークン検証"]
+VerifyToken --> Valid{"有効？"}
+Valid --> |はい| HashNew["新パスワードをハッシュ化"]
+HashNew --> MarkUsed["トークン使用済みマーク"]
+MarkUsed --> Done(["完了"])
+Valid --> |いいえ| Error400["400: 無効/期限切れ"]
 ```
 
 **図の出典**
-- [backend/app/api/deps.py:12-31](file://backend/app/api/deps.py#L12-L31)
-- [backend/app/core/security.py:29-35](file://backend/app/core/security.py#L29-L35)
-
-**節の出典**
-- [backend/app/api/api_v1/endpoints/auth.py:34-53](file://backend/app/api/api_v1/endpoints/auth.py#L34-L53)
-- [backend/app/core/config.py:51-53](file://backend/app/core/config.py#L51-L53)
-- [backend/app/main.py:73-102](file://backend/app/main.py#L73-L102)
+- [backend/app/api/api_v1/endpoints/auth.py:57-117](file://backend/app/api/api_v1/endpoints/auth.py#L57-L117)
 
 ## 依存関係分析
-- APIルーターのinclude
-  - /api/v1/auth、/api/v1/users、/api/v1/todosが統合。
-- 認証依存関係
-  - OAuth2PasswordBearerがtokenUrlとして「/api/v1/auth/token」を使用。
-  - deps.get_current_userがsecurity.decode_access_tokenとcrud_user.get_user_by_usernameに依存。
-- 設定依存
-  - SECRET_KEY、ALGORITHM、ACCESS_TOKEN_EXPIRE_MINUTES、RATE_LIMIT_*が設定で管理。
+- 認可依存（get_current_user）
+  - OAuth2PasswordBearer からトークン取得
+  - decode_access_token でペイロード検証
+  - DBからuserIdに対応するUserを取得
+  - トークン無効/ユーザー不在時は401
+
+- 認証エンドポイント
+  - register：email重複チェック、create_user
+  - token：email→hashed_password照合、JWT生成
+  - forgot-password：既存トークン無効化＋新トークン＋メール送信
+  - reset-password：トークン検証→ユーザー取得→パスワード更新→トークン使用済み
+
+- エラーハンドリング
+  - Validation Error → 422（ErrorResponse）
+  - HTTPException → 各ステータスコード（ErrorResponse）
+  - RateLimitExceeded → 429（ErrorResponse）
+  - その他の例外 → 500（ErrorResponse）
 
 ```mermaid
 graph LR
-API["api_v1/api.py"] --> AuthR["auth.py"]
-API --> UsersR["users.py"]
-API --> TodosR["todos.py"]
-UsersR --> Deps["deps.py"]
-AuthR --> Deps
-Deps --> Sec["security.py"]
-Deps --> DB["DB: users"]
-Sec --> Cfg["config.py"]
+D["deps.get_current_user"] --> S["security.decode_access_token"]
+D --> U["crud_user.get_user_by_id"]
+A["auth.register"] --> C["crud_user.create_user"]
+A --> V["email重複チェック"]
+T["auth.token"] --> P["verify_password"]
+T --> J["create_access_token"]
+F["auth.forgot-password"] --> R["crud_password_reset.invalidate/mark/create"]
+R --> M["send_reset_password_email"]
+RP["auth.reset-password"] --> VT["crud_password_reset.verify_reset_token"]
+RP --> HP["get_password_hash"]
 ```
 
 **図の出典**
-- [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
-- [backend/app/api/deps.py:10-31](file://backend/app/api/deps.py#L10-L31)
+- [backend/app/api/deps.py:1-37](file://backend/app/api/deps.py#L1-L37)
 - [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
-- [backend/app/core/config.py:51-53](file://backend/app/core/config.py#L51-L53)
+- [backend/app/api/api_v1/endpoints/auth.py:1-117](file://backend/app/api/api_v1/endpoints/auth.py#L1-L117)
 
 **節の出典**
-- [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
-- [backend/app/api/deps.py:10-31](file://backend/app/api/deps.py#L10-L31)
+- [backend/app/api/deps.py:1-37](file://backend/app/api/deps.py#L1-L37)
+- [backend/app/middleware/error_handler.py:1-149](file://backend/app/middleware/error_handler.py#L1-L149)
 
 ## パフォーマンス考慮事項
-- トークン検証のオーバーヘッド
-  - 各リクエストでJWTデコードとDB検索が発生するため、キャッシュ戦略（例：Redis）を検討。
-- DBクエリ
-  - usersテーブルへの単純なusername検索はインデックスにより高速だが、頻繁な更新は考慮。
-- トークン有効期限
-  - 短い有効期限はセキュリティ向上だが、認可エラーの頻発を招く可能性あり。
-- レート制限
-  - 認証・登録エンドポイントにはレートリミットが適用されているため、API利用に注意。
+- JWTペイロードの検証は軽量（署名検証＋ペイロード抽出）だが、get_current_user はDBアクセスを伴うため、頻繁な/users/me呼び出しには注意。
+- 認証系エンドポイントにはレートリミットが適用されているため、API利用頻度に応じて設定値を見直す必要がある。
+- DB接続プールやインデックス（email）の適切な設定が重要。
+
+[この節は一般的なガイダンスであり、特定のファイルを直接分析していません]
 
 ## トラブルシューティングガイド
 - 401 Unauthorized
-  - トークンが無効、期限切れ、またはAuthorizationヘッダーが不足している。
-  - 再ログインし、正しいBearerトークンを使用。
-- 404 Not Found（ユーザー情報取得時）
-  - DBに該当ユーザーが存在しない。ユーザーが削除された可能性。
-- 500 Internal Server Error
-  - JWTデコードエラー、DB接続エラー、その他のサーバーエラー。
-  - ログを確認し、設定（SECRET_KEY、DB接続文字列）を再確認。
+  - 無効なトークン、期限切れ、subのUUID変換エラー、ユーザー不在
+  - 対応：再ログイン、トークン再取得
+
+- 400 Bad Request（パスワードリセット）
+  - 無効または期限切れのトークン
+  - 対応：再度「パスワードを忘れた方」からリセット手続き
+
+- 404 Not Found（パスワードリセット）
+  - トークンは有効だが、該当ユーザーが削除された
+  - 対応：再度登録または管理者に問い合わせ
+
+- 422 Unprocessable Entity（バリデーションエラー）
+  - email形式不正、パスワード長不足、必須フィールド欠損
+  - 対応：フロント側でエラーメッセージを表示し修正
+
+- 429 Too Many Requests（レートリミット超過）
+  - 短時間でのリクエスト回数超過
+  - 対応：一定時間待機後再試行
 
 **節の出典**
-- [backend/app/api/deps.py:17-30](file://backend/app/api/deps.py#L17-L30)
-- [backend/app/core/security.py:33-35](file://backend/app/core/security.py#L33-L35)
-- [backend/app/main.py:67-71](file://backend/app/main.py#L67-L71)
+- [backend/app/middleware/error_handler.py:1-149](file://backend/app/middleware/error_handler.py#L1-L149)
+- [backend/app/api/api_v1/endpoints/auth.py:28-34](file://backend/app/api/api_v1/endpoints/auth.py#L28-L34)
+- [backend/app/api/deps.py:18-36](file://backend/app/api/deps.py#L18-L36)
 
 ## 結論
-- 現状、GET /api/v1/users/me（ユーザー情報取得）のみが実装されており、PUT（更新）およびDELETE（削除）エンドポイントは未実装です。
-- 認証はJWT BearerトークンによるOAuth2パスワードフローで行われ、セキュリティ設定（SECRET_KEY、アルゴリズム、有効期限）はconfig.pyで管理されています。
-- 保護されたフィールド（hashed_password）はレスポンスには含まれず、DB内でのみ保持されます。
-- 今後の開発では、PUT/DELETEエンドポイントの実装、バリデーションルール、パスワード変更処理、データクリーンアップ、確認ダイアログのフロントエンド連携を推奨します。
+本APIはJWT Bearer認証を基盤としたシンプルかつ堅牢なユーザー管理エンドポイント群です。認可フロー（/auth/token）→保護エンドポイント（/users/me）の流れが明確であり、エラーハンドリングが一貫しています。フロントエンドでは認証不要なページ（/login, /register, /forgot-password, /reset-password）と認証が必要なページ（Todo一覧など）があり、middlewareでトークンの有無をチェックしています。パスワードリセット機能は安全なトークン管理を前提としており、フロントエンドでのエラーハンドリングとユーザー体験向上が求められます。

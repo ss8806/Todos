@@ -76,5 +76,5 @@ async def test_user(db_session):
 @pytest_asyncio.fixture(loop_scope="function")
 async def auth_token(test_user):
     """Factory作成ユーザーのJWTトークン（API経由のログインを回避）"""
-    access_token = create_access_token(data={"sub": test_user.email})
+    access_token = create_access_token(data={"sub": str(test_user.id)})
     return access_token
