@@ -46,9 +46,10 @@ export default function Home() {
   const currentPage = Math.floor((filters.skip ?? 0) / (filters.limit ?? 10)) + 1;
   const pageSize = filters.limit ?? 10;
 
-  // 認証エラー（401）時のみログインページにリダイレクト
+  // 認証エラー（401）時はトークンをクリアしてログインページにリダイレクト
   useEffect(() => {
     if (isError && todosQuery.error instanceof ApiError && todosQuery.error.status === 401) {
+      logout();
       router.push("/login");
     }
   }, [isError, todosQuery.error, router]);
