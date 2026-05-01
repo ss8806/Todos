@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { login } from "@/lib/api";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -20,7 +19,6 @@ const loginSchema = z.object({
 type LoginForm = z.output<typeof loginSchema>;
 
 export default function LoginPage() {
-  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -33,9 +31,8 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     try {
       await login(data.email, data.password);
-      // Cookieの更新をサーバーに反映させるため refresh してから遷移
-      router.refresh();
-      router.push("/");
+      // Cookie/localStorageの更新を確実に反映させるためフルリロードで遷移
+      window.location.replace("/");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "ログインに失敗しました";
       setError("root", { message });
