@@ -72,6 +72,7 @@ export function useTodos(filters?: TodoFilters) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["todos"] });
+      toast.success("TODO更新", { description: "状態を変更しました" });
     },
     onError: (error: Error) => {
       toast.error("TODO更新失敗", { description: error.message });

@@ -1,7 +1,5 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
-from fastapi.openapi.models import SecurityScheme
 from contextlib import asynccontextmanager
 from scalar_fastapi import get_scalar_api_reference
 from sqlmodel import SQLModel, text
@@ -107,12 +105,20 @@ app.openapi = custom_openapi
 if settings.is_production and not settings.BACKEND_CORS_ORIGINS:
     raise RuntimeError("BACKEND_CORS_ORIGINS must be set in production environment")
 
+# 本番環境ではCORSを厳密に設定
+if settings.is_production:
+    allow_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+    allow_headers = ["Authorization", "Content-Type", "X-Requested-With"]
+else:
+    allow_methods = ["*"]
+    allow_headers = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=allow_methods,
+    allow_headers=allow_headers,
 )
 
 # ロギングミドルウェアの追加
