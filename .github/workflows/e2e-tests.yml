@@ -57,6 +57,7 @@ jobs:
       working-directory: ./backend
       env:
         DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/tododb
+        SECRET_KEY: test-secret-key-for-ci
       run: |
         uv run alembic upgrade head
     

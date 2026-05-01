@@ -1,6 +1,6 @@
 import uuid
 from typing import List, TYPE_CHECKING
-from sqlmodel import Field, Relationship, Index
+from sqlmodel import Field, Relationship
 from app.schemas.user import UserBase
 
 if TYPE_CHECKING:

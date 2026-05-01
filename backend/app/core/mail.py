@@ -36,7 +36,7 @@ async def send_reset_password_email(email: str, reset_token: str) -> None:
     )
 
     text_template = jinja_env.get_template("reset_password.txt")
-    text_content = text_template.render(
+    _ = text_template.render(
         reset_url=reset_url,
         expire_hours=settings.RESET_TOKEN_EXPIRE_HOURS,
         app_name=settings.MAIL_FROM_NAME,

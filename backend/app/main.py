@@ -20,7 +20,6 @@ from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi import HTTPException
 from slowapi.errors import RateLimitExceeded
-from app.core.limiter import limiter
 from app.middleware.error_handler import rate_limit_exception_handler
 
 # ロギングの初期化

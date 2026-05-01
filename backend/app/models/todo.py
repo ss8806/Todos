@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 import sqlalchemy as sa
 from sqlalchemy import Column, DateTime
 from sqlmodel import Field, Relationship, Index
-from app.schemas.todo import TodoBase, PriorityEnum
+from app.schemas.todo import TodoBase
 
 if TYPE_CHECKING:
     from app.models.user import User

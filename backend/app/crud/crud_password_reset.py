@@ -43,7 +43,7 @@ async def invalidate_existing_tokens(db: AsyncSession, user_id: UUID) -> None:
         select(PasswordResetToken)
         .where(
             PasswordResetToken.user_id == user_id,
-            PasswordResetToken.used == False,
+            not PasswordResetToken.used,
             PasswordResetToken.expires_at > datetime.now(timezone.utc)
         )
     )

@@ -14,7 +14,7 @@ async def test_create_todo(client, auth_token):
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == todo_data.title
-    assert data["is_completed"] == False
+    assert not data["is_completed"]
 
 @pytest.mark.asyncio
 async def test_read_todos(client, auth_token):
@@ -62,7 +62,7 @@ async def test_update_todo(client, auth_token):
     )
     assert response.status_code == 200
     data = response.json()
-    assert data["is_completed"] == True
+    assert data["is_completed"]
 
 @pytest.mark.asyncio
 async def test_delete_todo(client, auth_token):

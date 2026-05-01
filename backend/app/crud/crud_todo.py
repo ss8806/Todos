@@ -1,6 +1,6 @@
 import uuid
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, case
 from sqlmodel import select, col
