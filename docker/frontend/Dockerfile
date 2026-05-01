@@ -1,7 +1,7 @@
 FROM oven/bun:latest
 WORKDIR /app
-COPY frontend/package.json frontend/bun.lock ./
+COPY package.json bun.lock ./
 RUN bun install
-COPY frontend ./
+COPY . ./
 RUN bun run build
 CMD ["bun", "run", "start"]
