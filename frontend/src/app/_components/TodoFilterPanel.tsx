@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -9,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, X } from "lucide-react";
 import { TodoFilters } from "@/hooks/useTodos";
 
 interface TodoFilterPanelProps {
@@ -31,6 +32,23 @@ export function TodoFilterPanel({
   onPriorityFilter,
   onSortChange,
 }: TodoFilterPanelProps) {
+  const [searchValue, setSearchValue] = useState(filters.search || "");
+
+  const handleSearch = () => {
+    onSearch(searchValue);
+  };
+
+  const handleClear = () => {
+    setSearchValue("");
+    onSearch("");
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex gap-3">
@@ -38,11 +56,25 @@ export function TodoFilterPanel({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <Input
             placeholder="検索..."
-            value={filters.search || ""}
-            onChange={(e) => onSearch(e.target.value)}
-            className="pl-10"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            className="pl-10 pr-10"
           />
+          {searchValue && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
+        <Button variant="outline" onClick={handleSearch}>
+          <Search className="w-4 h-4 mr-2" />
+          検索
+        </Button>
         <Button
           variant="outline"
           size="icon"
