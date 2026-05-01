@@ -2,13 +2,36 @@ import uuid
 from typing import Optional
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func
+from sqlalchemy import func, case
 from sqlmodel import select, col
 from app.models.todo import Todo
 from app.schemas.todo import TodoCreate, PriorityEnum
 
+
+def _apply_todo_filters(
+    statement,
+    *,
+    search: Optional[str] = None,
+    is_completed: Optional[bool] = None,
+    priority: Optional[PriorityEnum] = None,
+    tags: Optional[str] = None,
+):
+    """TODOクエリに検索・フィルタ条件を適用する（DRY）"""
+    if search:
+        statement = statement.where(Todo.title.contains(search))
+    if is_completed is not None:
+        statement = statement.where(Todo.is_completed == is_completed)
+    if priority:
+        statement = statement.where(Todo.priority == priority)
+    if tags:
+        tag_list = [tag.strip() for tag in tags.split(",")]
+        for tag in tag_list:
+            statement = statement.where(Todo.tags.contains(tag))
+    return statement
+
+
 async def get_todos(
-    db: AsyncSession, 
+    db: AsyncSession,
     user_id: uuid.UUID,
     skip: int = 0,
     limit: int = 100,
@@ -23,36 +46,25 @@ async def get_todos(
     TODO一覧取得（検索・フィルタリング・ページネーション対応）
     """
     statement = select(Todo).where(Todo.user_id == user_id)
-    
-    # 検索フィルタ
-    if search:
-        statement = statement.where(Todo.title.contains(search))
-    
-    # 完了状態フィルタ
-    if is_completed is not None:
-        statement = statement.where(Todo.is_completed == is_completed)
-    
-    # 優先度フィルタ
-    if priority:
-        statement = statement.where(Todo.priority == priority)
-    
-    # タグフィルタ（部分一致）
-    if tags:
-        tag_list = [tag.strip() for tag in tags.split(",")]
-        for tag in tag_list:
-            statement = statement.where(Todo.tags.contains(tag))
-    
+    statement = _apply_todo_filters(
+        statement,
+        search=search,
+        is_completed=is_completed,
+        priority=priority,
+        tags=tags,
+    )
+
     # ソート
     if sort_by == "priority":
-        # 優先度の高い順 (high > medium > low)
+        # 優先度の論理順 (high=0, medium=1, low=2)
+        priority_order = case(
+            {"high": 0, "medium": 1, "low": 2},
+            value=Todo.priority
+        )
         if sort_order == "desc":
-            statement = statement.order_by(
-                col(Todo.priority).desc()
-            )
+            statement = statement.order_by(priority_order.asc())
         else:
-            statement = statement.order_by(
-                col(Todo.priority).asc()
-            )
+            statement = statement.order_by(priority_order.desc())
     elif sort_by == "due_date":
         if sort_order == "desc":
             statement = statement.order_by(col(Todo.due_date).desc())
@@ -63,10 +75,10 @@ async def get_todos(
             statement = statement.order_by(col(Todo.created_at).desc())
         else:
             statement = statement.order_by(col(Todo.created_at).asc())
-    
+
     # ページネーション
     statement = statement.offset(skip).limit(limit)
-    
+
     result = await db.execute(statement)
     return result.scalars().all()
 
@@ -82,17 +94,13 @@ async def count_todos(
     TODO件数取得（検索・フィルタリング対応）
     """
     statement = select(func.count()).select_from(Todo).where(Todo.user_id == user_id)
-
-    if search:
-        statement = statement.where(Todo.title.contains(search))
-    if is_completed is not None:
-        statement = statement.where(Todo.is_completed == is_completed)
-    if priority:
-        statement = statement.where(Todo.priority == priority)
-    if tags:
-        tag_list = [tag.strip() for tag in tags.split(",")]
-        for tag in tag_list:
-            statement = statement.where(Todo.tags.contains(tag))
+    statement = _apply_todo_filters(
+        statement,
+        search=search,
+        is_completed=is_completed,
+        priority=priority,
+        tags=tags,
+    )
 
     result = await db.execute(statement)
     return result.scalar_one()

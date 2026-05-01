@@ -160,8 +160,16 @@ export default function Home() {
     );
   }
 
-  // エラー時は何も表示しない（リダイレクト実行中）
+  // エラー時の表示制御
   if (isError) {
+    // 401認証エラー時はリダイレクト中なのでローディング表示を維持
+    if (todosQuery.error instanceof ApiError && todosQuery.error.status === 401) {
+      return (
+        <div className="min-h-screen bg-zinc-50 dark:bg-black flex items-center justify-center">
+          <Loader2 className="w-10 h-10 animate-spin text-zinc-300" />
+        </div>
+      );
+    }
     return null;
   }
 

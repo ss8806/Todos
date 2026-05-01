@@ -85,7 +85,7 @@ async def update_todo(
         tags=todo_in.tags
     )
     if not todo:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(status_code=404, detail="Todoが見つかりません")
     return todo
 
 @router.delete("/{id}", response_model=TodoDeleteResponse, summary="TODO削除", response_description="削除結果")
@@ -97,5 +97,5 @@ async def delete_todo(
 ) -> TodoDeleteResponse:
     todo = await crud_todo.delete_todo(db, todo_id=id, user_id=current_user.id)
     if not todo:
-        raise HTTPException(status_code=404, detail="Todo not found")
+        raise HTTPException(status_code=404, detail="Todoが見つかりません")
     return TodoDeleteResponse(status="success")
