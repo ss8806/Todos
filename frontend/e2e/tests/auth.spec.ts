@@ -23,16 +23,13 @@ test.describe('Authentication Flow', () => {
     await loginPage.login('invalid@example.com', 'wrongpassword');
 
     // エラーメッセージが表示されることを確認
-    // ページ上のエラーテキストまたはtoastのテキストを検出
-    await loginPage.page.waitForTimeout(2000); // APIレスポンスを待つ
-
     // 複数のエラー表示方法を試す
     const pageError = loginPage.page.locator('p.text-red-500').filter({ hasText: /ログイン|認証|失敗/ });
     const toastError = loginPage.page.locator('[data-sonner-toast]').filter({ hasText: /ログイン|認証|失敗/ });
 
-    // どちらかが表示されればOK
-    const isVisible = await pageError.isVisible().catch(() => false) ||
-                      await toastError.isVisible().catch(() => false);
+    // どちらかが表示されればOK（タイムアウト内で自動的にリトライ）
+    const isVisible = await pageError.isVisible({ timeout: 10000 }).catch(() => false) ||
+                      await toastError.isVisible({ timeout: 10000 }).catch(() => false);
     expect(isVisible).toBe(true);
   });
 

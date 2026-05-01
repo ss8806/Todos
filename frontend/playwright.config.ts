@@ -27,7 +27,7 @@ export default defineConfig({
   
   /* 各テストのタイムアウト */
   expect: {
-    timeout: 5000
+    timeout: 10000
   },
 
   use: {

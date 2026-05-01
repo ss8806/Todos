@@ -141,7 +141,6 @@ test.describe('Todo Page Navigation', () => {
     
     await loginPage.goto();
     await loginPage.login(testUsername, 'testpassword123');
-    await page.waitForTimeout(1500); // レートリミット回避
     await page.waitForURL('http://localhost:3000/', { timeout: 10000 });
     
     // テスト前に既存のTodoをクリーンアップ
