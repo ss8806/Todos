@@ -40,7 +40,7 @@ async def get_todos(
     priority: Optional[PriorityEnum] = None,
     tags: Optional[str] = None,
     sort_by: str = "created_at",
-    sort_order: str = "desc"
+    sort_order: str = "desc",
 ):
     """
     TODO一覧取得（検索・フィルタリング・ページネーション対応）
@@ -57,10 +57,7 @@ async def get_todos(
     # ソート
     if sort_by == "priority":
         # 優先度の論理順 (high=0, medium=1, low=2)
-        priority_order = case(
-            {"high": 0, "medium": 1, "low": 2},
-            value=Todo.priority
-        )
+        priority_order = case({"high": 0, "medium": 1, "low": 2}, value=Todo.priority)
         if sort_order == "desc":
             statement = statement.order_by(priority_order.asc())
         else:
@@ -81,6 +78,7 @@ async def get_todos(
 
     result = await db.execute(statement)
     return result.scalars().all()
+
 
 async def count_todos(
     db: AsyncSession,
@@ -105,12 +103,14 @@ async def count_todos(
     result = await db.execute(statement)
     return result.scalar_one()
 
+
 async def create_todo(db: AsyncSession, todo: TodoCreate, user_id: uuid.UUID):
     db_todo = Todo.model_validate(todo, update={"user_id": user_id})
     db.add(db_todo)
     await db.commit()
     await db.refresh(db_todo)
     return db_todo
+
 
 async def update_todo(
     db: AsyncSession,
@@ -120,7 +120,7 @@ async def update_todo(
     is_completed: Optional[bool] = None,
     priority: Optional[PriorityEnum] = None,
     due_date: Optional[datetime] = None,
-    tags: Optional[str] = None
+    tags: Optional[str] = None,
 ):
     """
     TODO更新（一部フィールドの更新に対応）
@@ -128,7 +128,7 @@ async def update_todo(
     statement = select(Todo).where(Todo.id == todo_id, Todo.user_id == user_id)
     result = await db.execute(statement)
     db_todo = result.scalar_one_or_none()
-    
+
     if db_todo:
         if title is not None:
             db_todo.title = title
@@ -146,6 +146,7 @@ async def update_todo(
         await db.refresh(db_todo)
 
     return db_todo
+
 
 async def delete_todo(db: AsyncSession, todo_id: uuid.UUID, user_id: uuid.UUID):
     statement = select(Todo).where(Todo.id == todo_id, Todo.user_id == user_id)

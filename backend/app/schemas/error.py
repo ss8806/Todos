@@ -6,6 +6,7 @@ class ErrorResponse(BaseModel):
     """
     統一エラーレスポンススキーマ
     """
+
     status_code: int
     detail: str
     message: Optional[str] = None
@@ -17,6 +18,7 @@ class ValidationErrorDetail(BaseModel):
     """
     バリデーションエラー詳細
     """
+
     field: str
     message: str
     value: Optional[Any] = None

@@ -1,4 +1,5 @@
 """PolyfactoryベースのテストデータFactory"""
+
 from polyfactory.factories.pydantic_factory import ModelFactory
 from app.schemas.user import UserCreate
 from app.schemas.todo import TodoCreate, PriorityEnum
@@ -11,6 +12,7 @@ class UserCreateFactory(ModelFactory):
         user_data = UserCreateFactory.build()
         user_data = UserCreateFactory.build(email="specific@example.com")
     """
+
     __model__ = UserCreate
 
     @classmethod
@@ -24,6 +26,7 @@ class UserCreateFactory(ModelFactory):
 
 class TodoCreateFactory(ModelFactory):
     """Todo作成用Factory"""
+
     __model__ = TodoCreate
 
     @classmethod

@@ -6,18 +6,37 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api import deps
 from app.crud import crud_todo
 from app.models.user import User
-from app.schemas.todo import TodoCreate, TodoRead, TodoUpdate, TodoCountResponse, TodoDeleteResponse, PriorityEnum
+from app.schemas.todo import (
+    TodoCreate,
+    TodoRead,
+    TodoUpdate,
+    TodoCountResponse,
+    TodoDeleteResponse,
+    PriorityEnum,
+)
 
 router = APIRouter(tags=["todos"])
 
-@router.get("/count", response_model=TodoCountResponse, summary="TODO件数取得", response_description="TODO件数")
+
+@router.get(
+    "/count",
+    response_model=TodoCountResponse,
+    summary="TODO件数取得",
+    response_description="TODO件数",
+)
 async def read_todos_count(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
     search: Optional[str] = Query(default=None, description="検索キーワード"),
-    is_completed: Optional[bool] = Query(default=None, description="完了状態でのフィルタ"),
-    priority: Optional[PriorityEnum] = Query(default=None, description="優先度でのフィルタ"),
-    tags: Optional[str] = Query(default=None, description="タグでのフィルタ（カンマ区切り）"),
+    is_completed: Optional[bool] = Query(
+        default=None, description="完了状態でのフィルタ"
+    ),
+    priority: Optional[PriorityEnum] = Query(
+        default=None, description="優先度でのフィルタ"
+    ),
+    tags: Optional[str] = Query(
+        default=None, description="タグでのフィルタ（カンマ区切り）"
+    ),
 ) -> TodoCountResponse:
     total = await crud_todo.count_todos(
         db,
@@ -29,18 +48,36 @@ async def read_todos_count(
     )
     return TodoCountResponse(total=total)
 
-@router.get("/", response_model=List[TodoRead], summary="TODO一覧取得", response_description="TODOリスト")
+
+@router.get(
+    "/",
+    response_model=List[TodoRead],
+    summary="TODO一覧取得",
+    response_description="TODOリスト",
+)
 async def read_todos(
     db: AsyncSession = Depends(deps.get_db),
     current_user: User = Depends(deps.get_current_user),
     skip: int = Query(default=0, ge=0, description="スキップする件数"),
     limit: int = Query(default=100, ge=1, le=100, description="取得件数"),
     search: Optional[str] = Query(default=None, description="検索キーワード"),
-    is_completed: Optional[bool] = Query(default=None, description="完了状態でのフィルタ"),
-    priority: Optional[PriorityEnum] = Query(default=None, description="優先度でのフィルタ"),
-    tags: Optional[str] = Query(default=None, description="タグでのフィルタ（カンマ区切り）"),
-    sort_by: str = Query(default="created_at", pattern="^(created_at|priority|due_date)$", description="ソート対象のフィールド"),
-    sort_order: str = Query(default="desc", pattern="^(asc|desc)$", description="ソートオーダー"),
+    is_completed: Optional[bool] = Query(
+        default=None, description="完了状態でのフィルタ"
+    ),
+    priority: Optional[PriorityEnum] = Query(
+        default=None, description="優先度でのフィルタ"
+    ),
+    tags: Optional[str] = Query(
+        default=None, description="タグでのフィルタ（カンマ区切り）"
+    ),
+    sort_by: str = Query(
+        default="created_at",
+        pattern="^(created_at|priority|due_date)$",
+        description="ソート対象のフィールド",
+    ),
+    sort_order: str = Query(
+        default="desc", pattern="^(asc|desc)$", description="ソートオーダー"
+    ),
 ) -> List[TodoRead]:
     todos = await crud_todo.get_todos(
         db,
@@ -52,11 +89,17 @@ async def read_todos(
         priority=priority,
         tags=tags,
         sort_by=sort_by,
-        sort_order=sort_order
+        sort_order=sort_order,
     )
     return todos
 
-@router.post("/", response_model=TodoRead, summary="TODO作成", response_description="作成されたTODO")
+
+@router.post(
+    "/",
+    response_model=TodoRead,
+    summary="TODO作成",
+    response_description="作成されたTODO",
+)
 async def create_todo(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -66,7 +109,13 @@ async def create_todo(
     todo = await crud_todo.create_todo(db, todo=todo_in, user_id=current_user.id)
     return todo
 
-@router.put("/{id}", response_model=TodoRead, summary="TODO更新", response_description="更新されたTODO")
+
+@router.put(
+    "/{id}",
+    response_model=TodoRead,
+    summary="TODO更新",
+    response_description="更新されたTODO",
+)
 async def update_todo(
     *,
     db: AsyncSession = Depends(deps.get_db),
@@ -82,13 +131,19 @@ async def update_todo(
         is_completed=todo_in.is_completed,
         priority=todo_in.priority,
         due_date=todo_in.due_date,
-        tags=todo_in.tags
+        tags=todo_in.tags,
     )
     if not todo:
         raise HTTPException(status_code=404, detail="Todoが見つかりません")
     return todo
 
-@router.delete("/{id}", response_model=TodoDeleteResponse, summary="TODO削除", response_description="削除結果")
+
+@router.delete(
+    "/{id}",
+    response_model=TodoDeleteResponse,
+    summary="TODO削除",
+    response_description="削除結果",
+)
 async def delete_todo(
     *,
     db: AsyncSession = Depends(deps.get_db),

@@ -10,7 +10,7 @@ async def test_forgot_password_existing_user(client, setup_db):
     # ユーザー登録
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "reset@example.com", "password": "oldpassword123"}
+        json={"email": "reset@example.com", "password": "oldpassword123"},
     )
 
     # メール送信をモック
@@ -18,8 +18,7 @@ async def test_forgot_password_existing_user(client, setup_db):
         mock_send.return_value = None
         # パスワードリセットリクエスト
         response = await client.post(
-            "/api/v1/auth/forgot-password",
-            json={"email": "reset@example.com"}
+            "/api/v1/auth/forgot-password", json={"email": "reset@example.com"}
         )
         assert response.status_code == 200
         data = response.json()
@@ -31,8 +30,7 @@ async def test_forgot_password_existing_user(client, setup_db):
 async def test_forgot_password_nonexistent_user(client, setup_db):
     """存在しないユーザーへのパスワードリセットリクエストでも200を返す"""
     response = await client.post(
-        "/api/v1/auth/forgot-password",
-        json={"email": "nonexistent@example.com"}
+        "/api/v1/auth/forgot-password", json={"email": "nonexistent@example.com"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -45,7 +43,7 @@ async def test_reset_password_success(client, setup_db):
     # ユーザー登録
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "reset2@example.com", "password": "oldpassword123"}
+        json={"email": "reset2@example.com", "password": "oldpassword123"},
     )
 
     # パスワードリセットトークンを直接作成
@@ -57,7 +55,7 @@ async def test_reset_password_success(client, setup_db):
     # パスワードリセット
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": raw_token, "new_password": "newpassword456"}
+        json={"token": raw_token, "new_password": "newpassword456"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -67,7 +65,7 @@ async def test_reset_password_success(client, setup_db):
     response = await client.post(
         "/api/v1/auth/token",
         data={"username": "reset2@example.com", "password": "newpassword456"},
-        headers={"Content-Type": "application/x-www-form-urlencoded"}
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
     )
     assert response.status_code == 200
     login_data = response.json()
@@ -79,7 +77,7 @@ async def test_reset_password_invalid_token(client, setup_db):
     """無効なトークンでのパスワードリセットテスト"""
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": "invalidtoken12345", "new_password": "newpassword456"}
+        json={"token": "invalidtoken12345", "new_password": "newpassword456"},
     )
     assert response.status_code == 400
     data = response.json()
@@ -92,7 +90,7 @@ async def test_reset_password_used_token(client, setup_db):
     # ユーザー登録
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "reset3@example.com", "password": "oldpassword123"}
+        json={"email": "reset3@example.com", "password": "oldpassword123"},
     )
 
     # トークン作成
@@ -107,7 +105,7 @@ async def test_reset_password_used_token(client, setup_db):
     # 使用済みトークンでリセット
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": raw_token, "new_password": "newpassword456"}
+        json={"token": raw_token, "new_password": "newpassword456"},
     )
     assert response.status_code == 400
     data = response.json()
@@ -122,7 +120,7 @@ async def test_reset_password_expired_token(client, setup_db):
     # ユーザー登録
     await client.post(
         "/api/v1/auth/register",
-        json={"email": "reset4@example.com", "password": "oldpassword123"}
+        json={"email": "reset4@example.com", "password": "oldpassword123"},
     )
 
     # 期限切れトークンを作成
@@ -138,7 +136,7 @@ async def test_reset_password_expired_token(client, setup_db):
     # 期限切れトークンでリセット
     response = await client.post(
         "/api/v1/auth/reset-password",
-        json={"token": raw_token, "new_password": "newpassword456"}
+        json={"token": raw_token, "new_password": "newpassword456"},
     )
     assert response.status_code == 400
     data = response.json()

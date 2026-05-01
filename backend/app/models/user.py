@@ -6,6 +6,7 @@ from app.schemas.user import UserBase
 if TYPE_CHECKING:
     from app.models.todo import Todo
 
+
 class User(UserBase, table=True):
     __tablename__ = "users"
 

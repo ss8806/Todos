@@ -14,7 +14,18 @@
 - [backend/app/core/config.py](file://backend/app/core/config.py)
 - [backend/app/main.py](file://backend/app/main.py)
 - [backend/tests/conftest.py](file://backend/tests/conftest.py)
+- [backend/app/core/logging.py](file://backend/app/core/logging.py)
+- [backend/app/middleware/logging.py](file://backend/app/middleware/logging.py)
+- [backend/app/core/security.py](file://backend/app/core/security.py)
 </cite>
+
+## 更新要旨
+**変更内容**
+- GitHub Actionsワークフローの統合：ci.ymlとe2e-tests.ymlの統合により、重複する処理を排除
+- Dockerコンテナ化の改善：uvとBunの導入によるパッケージ管理の高速化
+- 環境変数設定の強化：設定管理クラスを通じた柔軟な環境変数対応
+- ネットワーク構成の最適化：Mailpitメールサーバーの追加と設定
+- モニタリング設定の追加：構造化ログとリクエストログミドルウェアの導入
 
 ## 目次
 1. [イントロダクション](#イントロダクション)
@@ -28,25 +39,27 @@
 9. [結論](#結論)
 
 ## イントロダクション
-本プロジェクトではGitHub Actionsを活用した継続的インテグレーション（CI）と継続的デリバリー（CD）を実現しています。主な目的は以下の通りです：
+本プロジェクトではGitHub Actionsを活用した統合型継続的インテグレーション（CI）と継続的デリバリー（CD）を実現しています。主な目的は以下の通りです：
 - コード品質の維持：静的解析、ユニットテスト、型チェック、ESLintによるコード整形
 - 統合品質の確保：エンドツーエンドテスト（E2E）、Dockerイメージビルド検証
 - 自動化されたワークフロー：プッシュ・プルリクエスト・マージ時の各フェーズでの処理を自動化
+- モニタリングの強化：構造化ログとリクエストログミドルウェアによる運用監視
 
 ## プロジェクト構造
-GitHub Actionsの設定は`.github/workflows/`ディレクトリに配置されており、以下の2つのワークフローが定義されています：
-- ci.yml：ビルド・テスト・静的解析の自動化
-- e2e-tests.yml：エンドツーエンドテストの実行手順
+GitHub Actionsの設定は`.github/workflows/`ディレクトリに配置されており、統合された1つのワークフローが定義されています：
+- ci.yml：ビルド・テスト・静的解析・Dockerイメージビルドの統合ワークフロー
 
 ```mermaid
 graph TB
 subgraph "GitHub Actions"
-CI["ci.yml<br/>CIワークフロー"]
-E2E["e2e-tests.yml<br/>E2Eテストワークフロー"]
+CI["ci.yml<br/>統合CIワークフロー"]
 end
 subgraph "バックエンド"
 PY["backend/pyproject.toml<br/>依存関係管理"]
 CFG["backend/app/core/config.py<br/>設定管理"]
+SEC["backend/app/core/security.py<br/>セキュリティ設定"]
+LOG["backend/app/core/logging.py<br/>ログ設定"]
+MLOG["backend/app/middleware/logging.py<br/>リクエストログミドルウェア"]
 MAIN["backend/app/main.py<br/>APIサーバー"]
 TESTS["backend/tests/<br/>テストコード"]
 end
@@ -64,10 +77,10 @@ CI --> PY
 CI --> PKG
 CI --> DBDF
 CI --> FPDF
-E2E --> CFG
-E2E --> MAIN
-E2E --> PW
-E2E --> E2E_TESTS
+CI --> CFG
+CI --> LOG
+CI --> MLOG
+CI --> SEC
 DC --> CFG
 DC --> MAIN
 ```
@@ -81,7 +94,7 @@ DC --> MAIN
 - [.github/workflows/e2e-tests.yml:1-111](file://.github/workflows/e2e-tests.yml#L1-L111)
 
 ## コアコンポーネント
-### CIワークフロー（ci.yml）
+### 統合CIワークフロー（ci.yml）
 ci.ymlは以下のジョブを定義し、プッシュ・プルリクエスト時に自動実行されます：
 
 1. **Backend Lint（バックエンド静的解析）**
@@ -117,51 +130,17 @@ ci.ymlは以下のジョブを定義し、プッシュ・プルリクエスト�
    - backend/frontendそれぞれのDockerイメージをビルド（load=true）
    - タグ名：`todo-backend:latest`、`todo-frontend:latest`
 
-### E2Eテストワークフロー（e2e-tests.yml）
-e2e-tests.ymlは以下のプロセスを実行し、プッシュ・プルリクエスト時に自動テストを実施します：
-
-1. **Postgresサービス起動**
-   - PostgreSQL 16をサービスとして起動（5432ポート公開）
-
-2. **依存関係インストール**
-   - backend：uvによる依存関係インストール
-   - frontend：Bunによる依存関係インストール
-
-3. **Playwrightブラウザのインストール**
-   - Chromiumブラウザの準備（--with-depsオプション）
-
-4. **データベースマイグレーション**
-   - Alembicを使用して最新バージョンへマイグレーション
-
-5. **バックエンドサーバー起動**
-   - UvicornでFastAPIアプリケーションを8000ポートで起動
-   - 起動確認のためにOpenAPIドキュメントエンドポイントをcurlで確認
-
-6. **フロントエンドサーバー起動**
-   - Next.jsを3000ポートで起動
-   - 起動確認のためにルートエンドポイントをcurlで確認
-
-7. **E2Eテスト実行**
-   - Playwrightテストを実行
-   - 環境変数設定例：
-     - NEXT_PUBLIC_API_URL: `http://localhost:8000/api/v1`
-     - BASE_URL: `http://localhost:3000`
-     - CI: `true`
-
-8. **テスト成果の保存**
-   - 成功時：Playwrightレポートをアーティファクトとして保存
-   - 失敗時：テストスクリーンショットをアーティファクトとして保存
+**更新** Dockerコンテナ化の改善：uvとBunの導入により、パッケージ管理が高速化されました。backend/Dockerfileではuvのマルチステージビルドが採用され、frontend/DockerfileではBunの高速ビルドが実装されています。
 
 **節の出典**
 - [.github/workflows/ci.yml:1-200](file://.github/workflows/ci.yml#L1-L200)
-- [.github/workflows/e2e-tests.yml:1-111](file://.github/workflows/e2e-tests.yml#L1-L111)
 
 ## アーキテクチャ概観
 以下は、ci.ymlのジョブ間の依存関係と実行フローを示す図です。
 
 ```mermaid
 graph TB
-subgraph "CIワークフロー"
+subgraph "統合CIワークフロー"
 BL["Backend Lint"]
 BT["Backend Test"]
 FL["Frontend Lint"]
@@ -176,13 +155,16 @@ FT --> DBT
 end
 subgraph "サービス"
 PG["Postgres 16"]
+MP["Mailpit"]
 end
 BT --> PG
 DBT --> PG
+BT --> MP
 ```
 
 **図の出典**
 - [.github/workflows/ci.yml:10-200](file://.github/workflows/ci.yml#L10-L200)
+- [docker-compose.yml:14-25](file://docker-compose.yml#L14-L25)
 
 **節の出典**
 - [.github/workflows/ci.yml:10-200](file://.github/workflows/ci.yml#L10-L200)
@@ -199,10 +181,10 @@ participant BB as Backend Build
 participant BF as Frontend Build
 participant DB as Docker Registry
 GH->>BB : Docker Buildxセットアップ
-BB->>BB : docker/build-push-action実行
+BB->>BB : uvマルチステージビルド
 BB->>DB : todo-backend : latestをロード
 GH->>BF : Docker Buildxセットアップ
-BF->>BF : docker/build-push-action実行
+BF->>BF : Bun高速ビルド
 BF->>DB : todo-frontend : latestをロード
 ```
 
@@ -216,35 +198,8 @@ BF->>DB : todo-frontend : latestをロード
 - [docker/backend/Dockerfile:1-10](file://docker/backend/Dockerfile#L1-L10)
 - [docker/frontend/Dockerfile:1-8](file://docker/frontend/Dockerfile#L1-L8)
 
-### E2Eテスト実行フロー
-e2e-tests.ymlのE2Eテストジョブは、バックエンドとフロントエンドの両方を一時的に起動し、Playwrightでエンドツーエンドテストを実施します。
-
-```mermaid
-sequenceDiagram
-participant ACT as Actions Runner
-participant PG as Postgresサービス
-participant BE as Backendサーバー
-participant FE as Frontendサーバー
-participant PW as Playwright
-ACT->>PG : Postgres起動5432
-ACT->>ACT : 依存関係インストール
-ACT->>BE : Alembicマイグレーション
-ACT->>BE : Uvicorn起動8000
-BE->>BE : 起動確認/api/v1/docs
-ACT->>FE : Next.js起動3000
-FE->>FE : 起動確認/
-ACT->>PW : Playwrightテスト実行
-PW-->>ACT : テスト結果とレポート
-```
-
-**図の出典**
-- [.github/workflows/e2e-tests.yml:10-111](file://.github/workflows/e2e-tests.yml#L10-L111)
-
-**節の出典**
-- [.github/workflows/e2e-tests.yml:10-111](file://.github/workflows/e2e-tests.yml#L10-L111)
-
-### 環境変数設定
-ci.ymlとe2e-tests.ymlでは、環境変数をジョブレベルで設定しています。主な設定例は以下の通りです：
+### 環境変数設定と設定管理
+ci.ymlとe2e-tests.ymlでは、環境変数をジョブレベルで設定しています。設定管理クラスを通じて、柔軟な環境変数対応が実現されています。
 
 - Backend Testジョブ
   - DATABASE_URL: `postgresql+asyncpg://postgres:password@localhost:5432/tododb`
@@ -253,19 +208,64 @@ ci.ymlとe2e-tests.ymlでは、環境変数をジョブレベルで設定して�
 - Frontend Buildジョブ
   - NEXT_PUBLIC_API_URL: `http://localhost:8000/api/v1`
 
-- E2Eテストジョブ
-  - NEXT_PUBLIC_API_URL: `http://localhost:8000/api/v1`
-  - BASE_URL: `http://localhost:3000`
-  - CI: `true`
+- 設定管理クラス（config.py）
+  - 環境変数から読み込む設定：POSTGRES_USER、POSTGRES_PASSWORD、POSTGRES_SERVER、POSTGRES_PORT、POSTGRES_DB
+  - 本番環境用設定：SECRET_KEY、ALGORITHM、ACCESS_TOKEN_EXPIRE_MINUTES
+  - CORS設定：BACKEND_CORS_ORIGINS（本番環境では環境変数で厳密に制御）
+  - メール設定：SMTP_HOST、SMTP_PORT、SMTP_USER、SMTP_PASSWORD、SMTP_TLS、SMTP_SSL、MAIL_FROM
+  - フロントエンドURL：FRONTEND_URL
+  - パスワードリセット設定：RESET_TOKEN_EXPIRE_HOURS
 
-これらの環境変数は、FastAPIの設定（DATABASE_URL、SECRET_KEY）やNext.jsのAPIエンドポイント（NEXT_PUBLIC_API_URL）に影響を与えます。
+**更新** 環境変数設定の強化：設定管理クラスが導入され、環境変数の柔軟な対応が可能になりました。Rate Limiting設定も環境変数で制御可能となっています。
 
 **節の出典**
 - [.github/workflows/ci.yml:78-82](file://.github/workflows/ci.yml#L78-L82)
 - [.github/workflows/ci.yml:165-167](file://.github/workflows/ci.yml#L165-L167)
-- [.github/workflows/e2e-tests.yml:58-68](file://.github/workflows/e2e-tests.yml#L58-L68)
-- [.github/workflows/e2e-tests.yml:77-86](file://.github/workflows/e2e-tests.yml#L77-L86)
-- [.github/workflows/e2e-tests.yml:90-94](file://.github/workflows/e2e-tests.yml#L90-L94)
+- [backend/app/core/config.py:35-88](file://backend/app/core/config.py#L35-L88)
+
+### モニタリング設定とログ管理
+バックエンドには高度なモニタリング機能が実装されています。
+
+- 構造化ログ設定（logging.py）
+  - JSONフォーマットによるログ出力
+  - 時刻、ログレベル、ファイル名、関数名、行番号を含む詳細なメタデータ
+  - 標準出力への出力設定
+
+- リクエストログミドルウェア（middleware/logging.py）
+  - HTTPリクエスト・レスポンスの詳細なログ記録
+  - 処理時間の計測とX-Process-Timeヘッダーの追加
+  - エラー発生時の詳細なエラーログ出力
+
+- JWTセキュリティ設定（core/security.py）
+  - Argon2によるパスワードハッシュ化
+  - JWTトークンの生成と検証
+  - トークンの有効期限管理
+
+**更新** モニタリング設定の追加：構造化ログとリクエストログミドルウェアが導入され、運用監視の強化が実現されました。JWTセキュリティ設定も強化されています。
+
+**節の出典**
+- [backend/app/core/logging.py:1-36](file://backend/app/core/logging.py#L1-L36)
+- [backend/app/middleware/logging.py:1-67](file://backend/app/middleware/logging.py#L1-L67)
+- [backend/app/core/security.py:1-35](file://backend/app/core/security.py#L1-L35)
+
+### Mailpitメールサーバーの統合
+docker-compose.ymlにMailpitメールサーバーが追加され、開発環境でのメールテストが可能になりました。
+
+- Mailpitコンテナ設定
+  - 画像：axllent/mailpit:latest
+  - ポートマッピング：8025（Webインターフェース）、1025（SMTP）
+  - 環境変数：MP_MAX_MESSAGES=5000、MP_DATA_FILE=/data/mailpit.db
+  - 永続化ボリューム：mailpit_data
+
+- 設定管理（config.py）
+  - SMTP設定の環境変数対応（SMTP_HOST、SMTP_PORT、SMTP_USER、SMTP_PASSWORD、SMTP_TLS、SMTP_SSL）
+  - デフォルト値としてlocalhost:1025が設定
+
+**更新** ネットワーク構成の最適化：Mailpitメールサーバーの追加により、メール送信機能のテストが容易になりました。
+
+**節の出典**
+- [docker-compose.yml:14-25](file://docker-compose.yml#L14-L25)
+- [backend/app/core/config.py:69-77](file://backend/app/core/config.py#L69-L77)
 
 ### Playwright設定とE2Eテスト構成
 Playwrightの設定は、ci環境（CI=true）での動作を調整するために最適化されています。主な特徴は以下の通りです：
@@ -309,6 +309,7 @@ FT --> DBT
 - Dockerイメージビルドの高速化
   - uv（Pythonパッケージマネージャー）の使用により、依存関係のインストールが高速化
   - Docker Buildxの利用により、マルチステージビルドの効率化が期待できる
+  - Bunの導入により、フロントエンドビルドのパフォーマンスが向上
 
 - E2Eテストの安定性
   - Playwrightのretries設定（CI環境では2回）により、ネットワークや環境のわずかな不安定性に対応
@@ -316,6 +317,8 @@ FT --> DBT
 
 - テストの並列実行
   - E2Eテストはworkers: 1に設定されているため、並列実行は無効化されていますが、安定性を重視しています
+
+**更新** Dockerコンテナ化の改善：uvとBunの導入により、パッケージ管理とビルドプロセスのパフォーマンスが大幅に向上しました。
 
 **節の出典**
 - [.github/workflows/ci.yml:23-30](file://.github/workflows/ci.yml#L23-L30)
@@ -350,19 +353,38 @@ FT --> DBT
     - Postgresサービスのhealth checks（pg_isready）確認
     - 接続ポート（5432）の開放確認
 
+- Mailpitメールサーバー接続エラー
+  - 症状：メール送信テストでエラー
+  - 対処法：
+    - Mailpitコンテナの起動確認（ポート8025、1025）
+    - SMTP設定の確認（SMTP_HOST=localhost、SMTP_PORT=1025）
+    - Mailpitデータベースの永続化確認
+
+- 設定管理エラー
+  - 症状：環境変数が正しく読み込まれない
+  - 対処法：
+    - .envファイルの存在確認
+    - 設定クラスの環境変数読み込み確認
+    - CORS設定の本番環境対応確認
+
+**更新** 新しいトラブルシューティング項目の追加：Mailpitメールサーバーと設定管理に関するトラブルシューティングが追加されました。
+
 **節の出典**
 - [.github/workflows/ci.yml:78-90](file://.github/workflows/ci.yml#L78-L90)
-- [.github/workflows/e2e-tests.yml:63-86](file://.github/workflows/e2e-tests.yml#L63-L86)
-- [frontend/playwright.config.ts:59-64](file://frontend/playwright.config.ts#L59-L64)
+- [docker-compose.yml:14-25](file://docker-compose.yml#L14-L25)
+- [backend/app/core/config.py:85-88](file://backend/app/core/config.py#L85-L88)
 
 ## 結論
 本プロジェクトのGitHub Actions設定は、以下の点で効果的なCI/CDパイプラインを提供しています：
-- 静的解析、ユニットテスト、E2Eテスト、Dockerイメージビルドの自動化
-- プッシュ・プルリクエスト・マージ時の各フェーズでの処理を明確に分離
-- 環境変数を通じて、開発・テスト・本番環境の設定を柔軟に管理可能
-- PlaywrightによるE2Eテストの安定性をCI環境で保つための最適化
+- 静的解析、ユニットテスト、E2Eテスト、Dockerイメージビルドの統合自動化
+- Dockerコンテナ化の高速化（uv、Bunの導入）
+- 環境変数設定の柔軟な管理（設定管理クラスの導入）
+- モニタリングの強化（構造化ログ、リクエストログミドルウェア）
+- 開発環境の最適化（Mailpitメールサーバーの統合）
 
 今後の改善点としては、以下の点が考えられます：
 - Dockerイメージのキャッシュ戦略の導入
 - E2Eテストの並列実行（workersの増加）による実行時間短縮
 - Codecovレポートの品質向上（カバレッジ基準の設定）
+- 設定管理の拡張（環境別の設定ファイルの導入）
+- モニタリングの拡充（パフォーマンスメトリクスの追加）

@@ -1,6 +1,7 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Todo API"
     PROJECT_VERSION: str = "0.1.0"
@@ -83,8 +84,14 @@ Bearerトークンを使用して認証を行います。
     RESET_TOKEN_EXPIRE_HOURS: int = int(os.getenv("RESET_TOKEN_EXPIRE_HOURS", "24"))
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), ".env"),
-        extra="ignore"
+        env_file=os.path.join(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            ),
+            ".env",
+        ),
+        extra="ignore",
     )
+
 
 settings = Settings()

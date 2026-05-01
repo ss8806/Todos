@@ -10,6 +10,7 @@ async def test_health_check(client, setup_db):
     assert data["status"] == "ok"
     assert "database" in data["components"]
 
+
 @pytest.mark.asyncio
 async def test_root_endpoint(client, setup_db):
     """ルートエンドポイントのテスト"""
@@ -18,17 +19,17 @@ async def test_root_endpoint(client, setup_db):
     data = response.json()
     assert "message" in data
 
+
 @pytest.mark.asyncio
 async def test_validation_error(client, setup_db):
     """バリデーションエラーのテスト"""
     # 空のタイトルでTodo作成
     response = await client.post(
-        "/api/v1/todos/",
-        json={},
-        headers={"Authorization": "Bearer fake-token"}
+        "/api/v1/todos/", json={}, headers={"Authorization": "Bearer fake-token"}
     )
     # バリデーションエラーまたは認証エラー
     assert response.status_code in [401, 422]
+
 
 @pytest.mark.asyncio
 async def test_not_found(client, setup_db):
@@ -41,8 +42,7 @@ async def test_not_found(client, setup_db):
 async def test_validation_error_detail(client, setup_db):
     """バリデーションエラーの詳細テスト"""
     response = await client.post(
-        "/api/v1/auth/register",
-        json={"email": "not-an-email", "password": "short"}
+        "/api/v1/auth/register", json={"email": "not-an-email", "password": "short"}
     )
     assert response.status_code == 422
     data = response.json()

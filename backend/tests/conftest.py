@@ -20,10 +20,13 @@ from sqlmodel import SQLModel
 
 def _sync_reset_database():
     """同期的にデータベースを完全にリセット（greenlet問題を回避）"""
-    sync_url = settings.async_database_url.replace("postgresql+asyncpg://", "postgresql://")
+    sync_url = settings.async_database_url.replace(
+        "postgresql+asyncpg://", "postgresql://"
+    )
     sync_engine = create_engine(sync_url)
     with sync_engine.begin() as conn:
-        conn.execute(text("""
+        conn.execute(
+            text("""
             DO $$ DECLARE
                 r RECORD;
             BEGIN
@@ -34,7 +37,8 @@ def _sync_reset_database():
                     EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
                 END LOOP;
             END $$;
-        """))
+        """)
+        )
     SQLModel.metadata.create_all(sync_engine)
     sync_engine.dispose()
 

@@ -24,7 +24,9 @@ class PasswordResetToken(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="users.id", nullable=False)
     token_hash: str = Field(nullable=False, index=True)
-    expires_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
+    expires_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), nullable=False)
+    )
     used: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(
         sa_column=Column(DateTime(timezone=True), nullable=False),
@@ -41,7 +43,7 @@ class PasswordResetToken(SQLModel, table=True):
         )
         return (
             cls(user_id=user_id, token_hash=token_hash, expires_at=expires_at),
-            raw_token
+            raw_token,
         )
 
     def is_valid(self) -> bool:

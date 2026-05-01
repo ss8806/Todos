@@ -9,12 +9,13 @@ async def test_create_todo(client, auth_token):
     response = await client.post(
         "/api/v1/todos/",
         json={"title": todo_data.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["title"] == todo_data.title
     assert not data["is_completed"]
+
 
 @pytest.mark.asyncio
 async def test_read_todos(client, auth_token):
@@ -25,22 +26,22 @@ async def test_read_todos(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": todo1.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     await client.post(
         "/api/v1/todos/",
         json={"title": todo2.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # 一覧取得
     response = await client.get(
-        "/api/v1/todos/",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/todos/", headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 2
+
 
 @pytest.mark.asyncio
 async def test_update_todo(client, auth_token):
@@ -50,7 +51,7 @@ async def test_update_todo(client, auth_token):
     create_response = await client.post(
         "/api/v1/todos/",
         json={"title": todo_data.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     todo_id = create_response.json()["id"]
 
@@ -58,11 +59,12 @@ async def test_update_todo(client, auth_token):
     response = await client.put(
         f"/api/v1/todos/{todo_id}",
         json={"is_completed": True},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["is_completed"]
+
 
 @pytest.mark.asyncio
 async def test_delete_todo(client, auth_token):
@@ -72,24 +74,23 @@ async def test_delete_todo(client, auth_token):
     create_response = await client.post(
         "/api/v1/todos/",
         json={"title": todo_data.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     todo_id = create_response.json()["id"]
 
     # 削除
     response = await client.delete(
-        f"/api/v1/todos/{todo_id}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        f"/api/v1/todos/{todo_id}", headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
 
     # 削除されたことを確認
     get_response = await client.get(
-        "/api/v1/todos/",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/todos/", headers={"Authorization": f"Bearer {auth_token}"}
     )
     todos = get_response.json()
     assert not any(todo["id"] == todo_id for todo in todos)
+
 
 @pytest.mark.asyncio
 async def test_count_todos(client, auth_token):
@@ -100,22 +101,22 @@ async def test_count_todos(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": todo1.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     await client.post(
         "/api/v1/todos/",
         json={"title": todo2.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # 件数取得
     response = await client.get(
-        "/api/v1/todos/count",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/todos/count", headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
     data = response.json()
     assert data["total"] >= 2
+
 
 @pytest.mark.asyncio
 async def test_count_todos_with_filter(client, auth_token):
@@ -126,22 +127,23 @@ async def test_count_todos_with_filter(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": high_todo.title, "priority": high_todo.priority},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     await client.post(
         "/api/v1/todos/",
         json={"title": low_todo.title, "priority": low_todo.priority},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # 優先度「高」でフィルタ
     response = await client.get(
         "/api/v1/todos/count?priority=high",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["total"] >= 1
+
 
 @pytest.mark.asyncio
 async def test_unauthorized_access(client):
@@ -158,22 +160,25 @@ async def test_search_todos(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": todo1.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     await client.post(
         "/api/v1/todos/",
         json={"title": todo2.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     response = await client.get(
         "/api/v1/todos/?search=unique+search+keyword",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 1
-    assert all("unique" in todo["title"].lower() or "search" in todo["title"].lower() for todo in data)
+    assert all(
+        "unique" in todo["title"].lower() or "search" in todo["title"].lower()
+        for todo in data
+    )
 
 
 @pytest.mark.asyncio
@@ -183,12 +188,12 @@ async def test_filter_todos_by_status(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": todo1.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     response = await client.get(
         "/api/v1/todos/?is_completed=false",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -196,7 +201,7 @@ async def test_filter_todos_by_status(client, auth_token):
 
     response = await client.get(
         "/api/v1/todos/?is_completed=true",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -211,17 +216,17 @@ async def test_filter_todos_by_priority(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": high_todo.title, "priority": "high"},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     await client.post(
         "/api/v1/todos/",
         json={"title": low_todo.title, "priority": "low"},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     response = await client.get(
         "/api/v1/todos/?priority=high",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -235,12 +240,11 @@ async def test_filter_todos_by_tags(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": todo1.title, "tags": "work,urgent"},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     response = await client.get(
-        "/api/v1/todos/?tags=work",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/todos/?tags=work", headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -256,18 +260,18 @@ async def test_sort_todos(client, auth_token):
     await client.post(
         "/api/v1/todos/",
         json={"title": todo1.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     await client.post(
         "/api/v1/todos/",
         json={"title": todo2.title},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # 作成日でソート（古い順）
     response = await client.get(
         "/api/v1/todos/?sort_by=created_at&sort_order=asc",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -284,13 +288,13 @@ async def test_pagination(client, auth_token):
         await client.post(
             "/api/v1/todos/",
             json={"title": f"page todo {i} {todo.title}"},
-            headers={"Authorization": f"Bearer {auth_token}"}
+            headers={"Authorization": f"Bearer {auth_token}"},
         )
 
     # 1件ずつ取得（1ページ目）
     response = await client.get(
         "/api/v1/todos/?skip=0&limit=1",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -299,7 +303,7 @@ async def test_pagination(client, auth_token):
     # 1件ずつ取得（2ページ目）
     response = await client.get(
         "/api/v1/todos/?skip=1&limit=1",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -310,10 +314,11 @@ async def test_pagination(client, auth_token):
 async def test_update_nonexistent_todo(client, auth_token):
     """存在しないTodoの更新テスト（404）"""
     import uuid
+
     response = await client.put(
         f"/api/v1/todos/{uuid.uuid4()}",
         json={"title": "updated"},
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 404
 
@@ -322,8 +327,9 @@ async def test_update_nonexistent_todo(client, auth_token):
 async def test_delete_nonexistent_todo(client, auth_token):
     """存在しないTodoの削除テスト（404）"""
     import uuid
+
     response = await client.delete(
         f"/api/v1/todos/{uuid.uuid4()}",
-        headers={"Authorization": f"Bearer {auth_token}"}
+        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 404
