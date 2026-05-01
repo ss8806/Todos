@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 // next-themes のモック
@@ -10,18 +10,22 @@ jest.mock('next-themes', () => ({
 }));
 
 describe('ThemeToggle', () => {
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     render(<ThemeToggle />);
-    // ボタンが存在することを確認
-    const button = screen.getByRole('button');
-    expect(button).toBeInTheDocument();
+    // useEffectのマウント処理を待つ
+    await waitFor(() => {
+      const button = screen.getByRole('button');
+      expect(button).toBeInTheDocument();
+    });
   });
 
-  it('has accessible label', () => {
+  it('has accessible label', async () => {
     render(<ThemeToggle />);
-    // スクリーンリーダー用のテキストが存在することを確認
-    const srText = screen.getByText(/テーマを切り替え/i);
-    expect(srText).toBeInTheDocument();
-    expect(srText).toHaveClass('sr-only');
+    // useEffectのマウント処理を待つ
+    await waitFor(() => {
+      const srText = screen.getByText(/テーマを切り替え/i);
+      expect(srText).toBeInTheDocument();
+      expect(srText).toHaveClass('sr-only');
+    });
   });
 });

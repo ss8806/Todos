@@ -35,3 +35,24 @@ async def test_not_found(client, setup_db):
     """404エラーのテスト"""
     response = await client.get("/api/v1/nonexistent")
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_validation_error_detail(client, setup_db):
+    """バリデーションエラーの詳細テスト"""
+    response = await client.post(
+        "/api/v1/auth/register",
+        json={"email": "not-an-email", "password": "short"}
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert "error_code" in data or "detail" in data
+
+
+@pytest.mark.asyncio
+async def test_http_exception_handler_format(client, setup_db):
+    """HTTP例外のレスポンス形式テスト"""
+    response = await client.get("/api/v1/nonexistent")
+    assert response.status_code == 404
+    data = response.json()
+    assert "detail" in data or "message" in data
