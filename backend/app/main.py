@@ -35,9 +35,10 @@ async def lifespan(app: FastAPI):
     # アプリケーション起動時の処理
     logger.info("Application startup", extra={"version": settings.PROJECT_VERSION})
     
-    # 開発用: テーブルを自動生成
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+    # 開発用: テーブルを自動生成（本番環境ではAlembicで管理）
+    if settings.is_development:
+        async with engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.create_all)
     
     logger.info("Database initialized successfully")
     

@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
+import sqlalchemy as sa
+from sqlalchemy import Column, DateTime
 from sqlmodel import Field, Relationship, Index
 from app.schemas.todo import TodoBase, PriorityEnum
 
@@ -18,7 +20,13 @@ class Todo(TodoBase, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="users.id", nullable=False, index=True)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    created_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: datetime = Field(
+        sa_column=Column(DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
     user: Optional["User"] = Relationship(back_populates="todos")

@@ -141,8 +141,6 @@ async def update_todo(
         if tags is not None:
             db_todo.tags = tags
 
-        db_todo.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-
         db.add(db_todo)
         await db.commit()
         await db.refresh(db_todo)
