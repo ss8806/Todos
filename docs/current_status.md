@@ -8,7 +8,7 @@
 - **Framework**: FastAPI
 - **Python**: 3.13 (Docker), 3.10+ (Local)
 - **Package Manager**: `uv`
-- **主要ライブラリ**: `sqlmodel`, `asyncpg`, `scalar-fastapi`, `python-multipart`, `greenlet`, `uvicorn`, `python-jose`, `passlib`, `alembic`
+- **主要ライブラリ**: `sqlmodel`, `asyncpg`, `scalar-fastapi`, `python-multipart`, `greenlet`, `uvicorn`, `python-jose`, `passlib`, `alembic`, `slowapi`
 - **エントリーポイント**: `backend/app/main.py`
 - **APIドキュメント**: `/docs` (Scalar)
 
@@ -53,7 +53,8 @@ Todo/
 
 | コマンド | 内容 |
 | :--- | :--- |
-| `just up` | Dockerで全サービスを一括起動 |
+| `just up` | DockerでDBのみ起動 |
+| `just dev` | DB + バックエンド + フロントエンドを一括起動 |
 | `just down` | サービスを停止 |
 | `just logs` | ログをリアルタイム表示 |
 | `just backend-dev` | ローカルでバックエンドを起動 (uv run) |
@@ -70,7 +71,7 @@ Todo/
 | DBスキーマ設計 | ✅ 完了 | SQLModelによる統合済み |
 | API設計 | ✅ 完了 | 仕様書に定義済み |
 | DB接続実装 | ✅ 完了 | SQLModel + AsyncSession (asyncpg) |
-| 認証機能実装 | ✅ 完了 | JWT認証、ユーザー登録・ログイン・ログアウト実装済み |
+| 認証機能実装 | ✅ 完了 | JWT認証、ユーザー登録・ログイン・ログアウト・パスワードリセット実装済み |
 | Todo機能実装 | ✅ 完了 | CRUD、検索・フィルタ・ソート・ページネーション実装済み |
 | E2Eテスト | ✅ 完了 | Playwrightによる認証・Todoフローテスト実装済み |
 | CI/CD | ✅ 完了 | GitHub Actionsでlint・test・build・E2E実行 |

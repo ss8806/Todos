@@ -18,6 +18,8 @@ Todoリストアプリの仕様書です。
 - **Language**: Python
 - **Package Manager**: uv
 - **Auth**: JWT (JSON Web Token)
+- **API Docs**: Scalar (scalar-fastapi)
+- **Rate Limit**: slowapi
 
 ### データベース / インフラ
 - **Database**: PostgreSQL
@@ -52,7 +54,7 @@ Todoリストアプリの仕様書です。
 | カラム名 | 型 | 制約 | 説明 |
 | :--- | :--- | :--- | :--- |
 | id | UUID | Primary Key | ユーザーID |
-| username | VARCHAR(50) | Unique, Not Null | ユーザー名 |
+| email | VARCHAR(50) | Unique, Not Null | メールアドレス（ログインID） |
 | hashed_password | TEXT | Not Null | ハッシュ化されたパスワード |
 
 ### todos テーブル
@@ -63,10 +65,10 @@ Todoリストアプリの仕様書です。
 | title | VARCHAR(255) | Not Null | Todoのタイトル |
 | is_completed | BOOLEAN | Default: false | 完了フラグ |
 | priority | VARCHAR(10) | Default: 'low' | 優先度 (high / medium / low) |
-| due_date | TIMESTAMP | Nullable | 期限日時 |
+| due_date | TIMESTAMP WITH TIME ZONE | Nullable | 期限日時 |
 | tags | VARCHAR(500) | Nullable | タグ（カンマ区切り） |
-| created_at | TIMESTAMP | Default: now() | 作成日時 |
-| updated_at | TIMESTAMP | Default: now() | 更新日時 |
+| created_at | TIMESTAMP WITH TIME ZONE | Default: now() | 作成日時 |
+| updated_at | TIMESTAMP WITH TIME ZONE | Default: now() | 更新日時 |
 
 ---
 
@@ -75,6 +77,8 @@ Todoリストアプリの仕様書です。
 ### 認証系
 - `POST /auth/register`: ユーザー登録
 - `POST /auth/token`: ログイン（アクセストークン取得）
+- `POST /auth/forgot-password`: パスワードリセットメール送信
+- `POST /auth/reset-password`: パスワードリセット実行
 
 ### ユーザー系
 - `GET /users/me`: 現在のユーザー情報取得
@@ -94,6 +98,9 @@ Todoリストアプリの仕様書です。
 - `PUT /todos/{id}`: Todo更新（タイトル・完了状態・優先度・期限・タグ）
 - `GET /todos/count`: Todo件数取得（フィルタ条件を引き継ぐ）
 - `DELETE /todos/{id}`: Todo削除
+
+### システム系
+- `GET /health`: ヘルスチェック（データベース接続含む）
 
 ---
 
@@ -121,17 +128,22 @@ todo-project/
 
 プロジェクトの初期化は完了しています。`just` コマンドを使用して、簡単に操作できます。
 
-1. **一括起動 (Docker)**:
+1. **DB起動 (Docker)**:
    ```bash
    just up
    ```
 
-2. **停止**:
+2. **一括開発起動 (DB + Backend + Frontend)**:
+   ```bash
+   just dev
+   ```
+
+3. **停止**:
    ```bash
    just down
    ```
 
-3. **ログの確認**:
+4. **ログの確認**:
    ```bash
    just logs
    ```
