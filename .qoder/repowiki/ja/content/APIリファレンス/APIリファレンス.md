@@ -18,7 +18,14 @@
 - [backend/app/crud/crud_password_reset.py](file://backend/app/crud/crud_password_reset.py)
 - [backend/app/models/user.py](file://backend/app/models/user.py)
 - [backend/app/models/todo.py](file://backend/app/models/todo.py)
+- [SPECIFICATION.md](file://SPECIFICATION.md)
 </cite>
+
+## 更新概要
+**変更内容**
+- GraphQL APIに関する参照を完全に削除しました
+- GraphQL関連のエラーハンドリングやセキュリティスキームの記述を削除しました
+- GraphQL関連の図解を削除し、RESTful APIのみの構造に統一しました
 
 ## 目次
 1. [はじめに](#はじめに)
@@ -34,6 +41,8 @@
 
 ## はじめに
 本リファレンスは、バックエンドAPI（FastAPI）におけるRESTfulエンドポイントの包括的な仕様を提供します。認証系、ユーザー系、Todo系の各エンドポイントについて、HTTPメソッド、URLパターン、リクエスト/レスポンススキーマ、認証要件、エラーコード、使用例、パラメータとバリデーションルール、エラーハンドリングの仕組みを詳細に記載しています。
+
+**更新** GraphQL APIは削除されたため、RESTful APIのみを対象にしました。
 
 ## プロジェクト構造
 APIはバージョンプレフィックス `/api/v1` 以下のルータに分割されており、認証、ユーザー、Todoの3つのカテゴリに分かれています。全体のエントリーポイントはアプリケーションルートで、OpenAPI仕様は `/api/v1/openapi.json` で公開され、Scalar UIは `/docs` で提供されます。
@@ -57,7 +66,7 @@ M --> N
 ```
 
 **図の出典**
-- [backend/app/main.py:128](file://backend/app/main.py#L128)
+- [backend/app/main.py:140](file://backend/app/main.py#L140)
 - [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
 - [backend/app/api/api_v1/endpoints/auth.py:1-117](file://backend/app/api/api_v1/endpoints/auth.py#L1-L117)
 - [backend/app/api/api_v1/endpoints/users.py:1-14](file://backend/app/api/api_v1/endpoints/users.py#L1-L14)
@@ -75,7 +84,7 @@ M --> N
 - [backend/app/models/todo.py:1-25](file://backend/app/models/todo.py#L1-L25)
 
 **節の出典**
-- [backend/app/main.py:128](file://backend/app/main.py#L128)
+- [backend/app/main.py:140](file://backend/app/main.py#L140)
 - [backend/app/api/api_v1/api.py:1-8](file://backend/app/api/api_v1/api.py#L1-L8)
 
 ## コアコンポーネント
@@ -499,6 +508,8 @@ OK200 --> End
 
 ## 結論
 本APIは、認証・ユーザー・Todoの3カテゴリに分かれたRESTfulエンドポイントを提供し、JWTによる認可、共通エラーハンドリング、スキーマバリデーション、レートリミット、CORS、ロギングなどの堅牢な設計が施されています。Todo系エンドポイントは検索・フィルタ・ページネーション・ソートに対応しており、パフォーマンスと可用性のバランスを考慮した実装となっています。
+
+**更新** GraphQL APIは削除されたため、RESTful APIのみを対象にしました。
 
 ## 付録
 
